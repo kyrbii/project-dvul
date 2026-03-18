@@ -1,3 +1,3 @@
 # project-dvul
 
-see our documentation @ [Our Confluence](dvul.atlassian.com)
+see our documentation @ [Our Confluence](https://dvul.atlassian.net/wiki/spaces/dvul/overview)
