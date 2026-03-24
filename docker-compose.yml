@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: .
+    command: uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: .
+    command: uv run streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://backend:8000
+    depends_on:
+      - backend
