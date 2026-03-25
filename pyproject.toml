@@ -7,7 +7,9 @@ dependencies = [
     "uvicorn",
     "streamlit",
     "langchain",
-    "requests"
+    "requests",
+    "langchain-nvidia-ai-endpoints>=1.2.1",
+    "dotenv>=0.9.9",
 ]
 
 [tool.ruff]
