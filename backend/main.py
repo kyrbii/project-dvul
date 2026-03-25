@@ -1,6 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from llm.service import get_response
+import os
+import dotenv
+
+dotenv.load_dotenv()
 import pandas as pd
 import numpy as np
 
