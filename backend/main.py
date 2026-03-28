@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+
 from llm.service import get_response
 
 app = FastAPI()
