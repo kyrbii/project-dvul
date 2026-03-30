@@ -1,0 +1,25 @@
+name: Ruff Code Review
+on:
+  pull_request: # Only triggers when you open/update a Pull Request
+
+jobs:
+  ruff-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Essential for Reviewdog to post comments
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruff Suggestions
+        uses: reviewdog/action-ruff@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # This creates the "Commit Suggestion" boxes in your PR
+          reporter: github-pr-review 
+          # Use 'warning' so the CI stays "Neutral" instead of "Failed"
+          level: warning 
+          # Only comments on lines you changed in this PR
+          filter_mode: added 
+          # Runs both the linter and the formatter
+          args: "check --output-format=github . && ruff format --check"
