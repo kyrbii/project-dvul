@@ -15,6 +15,7 @@ jobs:
       - name: Install Ruff
         uses: astral-sh/ruff-action@v3
         with:
+          args: check --exit-zero
           version: "latest"
 
       # 2. Setup Reviewdog executable
