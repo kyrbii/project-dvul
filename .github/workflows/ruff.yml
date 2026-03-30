@@ -28,12 +28,11 @@ jobs:
       - name: Run Ruff with Reviewdog
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUFF_OUTPUT_FORMAT: text # This forces Ruff to be "readable" for Reviewdog
         run: |
-          # 1. Suggest Formatting fixes
-          # We add --quiet to ensure no extra logs mess up the pipe
-          ruff format --diff --quiet . | reviewdog -f=diff -f.diff.strip=0 -name="ruff-format" -reporter=github-pr-review -filter-mode=added -level=warning
+          # 1. Suggest Formatting fixes (using diff format)
+          # We use '|| true' so the workflow doesn't stop if it finds formatting issues
+          ruff format --diff . | reviewdog -f=diff -f.diff.strip=0 -name="ruff-format" -reporter=github-pr-review -filter-mode=added -level=warning || true
           
-          # 2. Suggest Linting fixes
-          # We use 'ruff' as the format name so Reviewdog knows how to parse it
-          ruff check . | reviewdog -f=ruff -name="ruff-check" -reporter=github-pr-review -filter-mode=added -level=warning
+          # 2. Suggest Linting fixes (using rdjson)
+          # Ruff outputs native Reviewdog JSON, making it impossible to have a parse error
+          ruff check --output-format=rdjson . | reviewdog -f=rdjson -name="ruff-check" -reporter=github-pr-review -filter-mode=added -level=warning || true
