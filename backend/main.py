@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from llm.service import get_response
 import pandas as pd
+import numpy as np
 
 app = FastAPI()
 
@@ -22,9 +23,11 @@ async def upload_csv(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(status_code=400, detail="CSV-Datei konnte nicht gelesen werden.")
     
+    preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
+    
     return {
         "filename": file.filename,
         "rows": len(df),
         "columns": df.columns.tolist(),
-        "preview": df.head(5).to_dict(orient="records")
+        "preview": preview_df.to_dict(orient="records")
     }
