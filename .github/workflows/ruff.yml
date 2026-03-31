@@ -29,10 +29,5 @@ jobs:
         env:
           REVIEWDOG_GITHUB_API_TOKEN: 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
         run: |
-          # 1. Suggest Formatting fixes (using diff format)
-          # We use '|| true' so the workflow doesn't stop if it finds formatting issues
           ruff format --diff . | reviewdog -f=diff -f.diff.strip=0 -name="ruff-format" -reporter=github-pr-review -filter-mode=added -level=warning || true
-          
-          # 2. Suggest Linting fixes (using rdjson)
-          # Ruff outputs native Reviewdog JSON, making it impossible to have a parse error
           ruff check --output-format=rdjson . | reviewdog -f=rdjson -name="ruff-check" -reporter=github-pr-review -filter-mode=added -level=warning || true
