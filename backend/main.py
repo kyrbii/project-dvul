@@ -7,7 +7,7 @@ import os
 import dotenv
 
 dotenv.load_dotenv()
-import pandas as pd
+
 import numpy as np
 
 app = FastAPI()
