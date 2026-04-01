@@ -1,7 +1,6 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 import os
 import dotenv
-
 dotenv.load_dotenv()
 
 def get_response(message: str) -> str:
@@ -15,7 +14,7 @@ def get_response(message: str) -> str:
     # TODO: Add thinking mode to environment variables
     
     # define the API Client
-    print('I am here')
+
     client = ChatNVIDIA(
       model=os.getenv("LLM_MODEL"),
       api_key= os.getenv("LLM_API_KEY"),
@@ -26,8 +25,6 @@ def get_response(message: str) -> str:
 
     # get the response
     response = client.invoke([{"role":"user","content":message}])
-    # debugging the response
-    print(response.content)
-    
+      
     return response.content
 

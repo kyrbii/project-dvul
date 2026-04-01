@@ -1,0 +1,34 @@
+name: Ruff Code Review
+on:
+  pull_request: # Only run on Pull Requests
+
+jobs:
+  ruff-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write 
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Install Ruff (using the official Astral action)
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check --exit-zero
+          version: "latest"
+
+      # 2. Setup Reviewdog executable
+      - name: Setup Reviewdog
+        uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+
+      # 3. Run Ruff and pipe to Reviewdog for suggestions
+      - name: Run Ruff with Reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # ruff format --diff . | reviewdog -f=diff -f.diff.strip=0 -name="ruff-format" -reporter=github-pr-review -filter-mode=added -level=warning || true
+
+          ruff check --output-format=rdjson . | reviewdog -f=rdjson -name="ruff-check" -reporter=github-pr-review -filter-mode=added -level=warning || true
