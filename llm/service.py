@@ -1,6 +1,6 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
-from typing import List, Optional, Any, Dict
+from typing import List, Any, Dict
 from pydantic import BaseModel, Field
 import json
 import os
