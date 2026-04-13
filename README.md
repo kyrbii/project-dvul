@@ -2,6 +2,22 @@
 
 see our documentation @ [Our Confluence](https://dvul.atlassian.net/wiki/spaces/dvul/overview)
 
+## Testing
+
+First, sync your environment:
+```bash
+uv sync
+```
+
+**Terminal (Backend):**
+```bash
+uv run uvicorn backend.main:app --port 8000 --reload
+```
+
+**Browser:**
+http://localhost:8000/docs
+
+
 ## Running locally
 
 ### Using Docker (Recommended)

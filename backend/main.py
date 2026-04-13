@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 import numpy as np
 import pandas as pd
-from llm.service import get_response
+from llm.service import get_response, get_response_with_file
 import os
 import dotenv
 
@@ -29,9 +29,19 @@ async def upload_csv(file: UploadFile = File(...)):
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
     
+    # Let the model analyze the file
     return {
-        "filename": file.filename,
-        "rows": len(df),
-        "columns": df.columns.tolist(),
-        "preview": preview_df.to_dict(orient="records")
+        "response": get_response_with_file({
+            "filename": file.filename,
+            "rows": len(df),
+            "columns": df.columns.tolist(),
+            "preview": preview_df.to_dict(orient="records")
+        })
     }
+    
+    # return {
+    #     "filename": file.filename,
+    #     "rows": len(df),
+    #     "columns": df.columns.tolist(),
+    #     "preview": preview_df.to_dict(orient="records")
+    # }
