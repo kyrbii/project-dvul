@@ -1,17 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from pydantic import BaseModel
 import numpy as np
 import pandas as pd
-from llm.service import get_response, get_response_with_file
-import os
+from backend.llm.service import get_response, get_response_with_file#
+from models.messages import ChatRequest
 import dotenv
 
 dotenv.load_dotenv()
 
 app = FastAPI()
-
-class ChatRequest(BaseModel):
-    message: str
 
 @app.post("/chat")
 def chat(request: ChatRequest):
