@@ -4,20 +4,13 @@
 
 Ruff installieren:
 ```bash
-pip install ruff
+uv sync --dev
 ```
 
 Code prüfen und fixen **vor jedem Commit**:
 ```bash
 ruff check --fix .   # Lint-Fehler automatisch beheben
 ruff format .        # Code formatieren
-```
-
-Danach normal committen und pushen:
-```bash
-git add .
-git commit -m "fix: ruff errors"
-git push
 ```
 
 ---
