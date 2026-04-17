@@ -2,17 +2,41 @@ from typing import List, Any, Dict
 from pydantic import BaseModel, Field
 
 
+# ToDo: Change to user_message -> change BE code
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
 
-# Define the input structure (what your frontend/parser sends)
+class ChatResponse(BaseModel):
+    bot_message: str = Field(description="Response to the user_message to be displayed in chat")
+    plot_reference: List[int] = Field(description="List of plot references to be displayed in chat")
+
+# ? @Sandra
+# ToDo: change fields to pd.DataFrame.describe() output, and file name and header Row (maybe)
 class FileInfo(BaseModel):
     filename: str
     rows: int
     columns: List[str]
     preview: List[Dict[str, Any]]
 
-# Define the output structure (what you want from the LLM)
+class FileRequest(BaseModel):
+    user_message: str = Field(description="User prompt / description")
+    file_info: FileInfo = Field(description="File keyfacts for Analysis by LLM")
+    file_preview: List[Dict[str, Any]] = Field(description="File preview for Analysis by LLM")
+
+
+# Define the output structures (what you want from the LLM)
 class AnalysisOutput(BaseModel):
     heading: str = Field(description="A professional heading for the dataset")
     description: str = Field(description="A 2-3 sentence summary of the data content")
+
+class PlotAction(BaseModel):
+    title: str = Field(description="A short title for this specific plot")
+    code: str = Field(description="Independent Python code using pandas/matplotlib to create the plot. Assume 'df' is already loaded.")
+
+class AnalysisResponse(BaseModel):
+    summary: str = Field(description="A brief summary of the overall data findings")
+    plots: List[PlotAction] = Field(
+        default=[], 
+        description="A list of up to 3 independent plotting actions.",
+        max_length=3
+    )
