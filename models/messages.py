@@ -3,7 +3,11 @@ from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
-    message: str
+    user_message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
+
+class ChatResponse(BaseModel):
+    bot_message: str = Field(description="Response to the user_message to be displayed in chat")
+    plot_reference: List[int] = Field(description="List of plot references to be displayed in chat")
 
 # Define the input structure (what your frontend/parser sends)
 class FileInfo(BaseModel):
