@@ -8,7 +8,7 @@ import dotenv
 
 dotenv.load_dotenv()
 
-def get_response(message: str) -> ChatResponse:
+def get_response(request: ChatRequest) -> ChatResponse:
   return ChatResponse(
     bot_message="This is a placeholder for the chat without file",
     plot_reference=[]

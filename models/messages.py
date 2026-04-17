@@ -2,8 +2,9 @@ from typing import List, Any, Dict
 from pydantic import BaseModel, Field
 
 
+# ToDo: Change to user_message -> change BE code
 class ChatRequest(BaseModel):
-    user_message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
+    message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
 
 class ChatResponse(BaseModel):
     bot_message: str = Field(description="Response to the user_message to be displayed in chat")
