@@ -1,6 +1,6 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
-from models.messages import FileInfo, AnalysisOutput
+from models.messages import FileInfo, AnalysisOutput, ChatRequest, ChatResponse
 import json
 import os
 from typing import Any, Dict
@@ -8,11 +8,13 @@ import dotenv
 
 dotenv.load_dotenv()
 
-def get_response(message: str) -> str:
-    # Minimal Langchain integration point
+def get_response(message: str) -> ChatResponse:
+  return ChatResponse(
+    bot_message="This is a placeholder for the chat without file",
+    plot_reference=[]
+  )
 
-    # TODO: Add API key to environment variables
-    # TODO: Add model to environment variables
+def get_response(message: str) -> str:
     # TODO: Add temperature to environment variables
     # TODO: Add top_p to environment variables
     # TODO: Add max_completion_tokens to environment variables
@@ -35,6 +37,11 @@ def get_response(message: str) -> str:
 
 
 
+def get_response_with_file(request: ChatRequest) -> ChatResponse:
+  return ChatResponse(
+    bot_message="This is a placeholder for the chat with file",
+    plot_reference=[]
+  )
 
 def get_response_with_file(data: Dict[str, Any]) -> dict:
     # Validate the incoming dictionary against our model
