@@ -56,9 +56,9 @@ def get_response_with_file(data: Dict[str, Any]) -> dict:
       )
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are 'DVUL' a helpful assistant, that analyzes data. You will get a preview of a .csv file."
-                          "From the header and the first 5 rows, you should be able to understand the data."
-                          "Return a Heading and a short description of the data."),
+        ("system", """You are 'DVUL' a helpful assistant, that analyzes data. You will get a preview of a .csv file.
+                      From the header and the first 5 rows, you should be able to understand the data.
+                      Return a Heading and a short description of the data."""),
         ("user", "Analyze this file:\n\n"
                  "Filename: {filename}\n"
                  "Total Rows: {rows}\n"

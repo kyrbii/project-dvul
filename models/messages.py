@@ -1,6 +1,11 @@
-from typing import List, Any, Dict
+from typing import List, Any, Dict, TypeVar
 from pydantic import BaseModel, Field
 
+# featured models:
+# ChatRequest, ChatResponse, FileInfo, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse
+
+# Generic Type for any Pydantic model
+T = TypeVar("T", bound=BaseModel)
 
 # ToDo: Change to user_message -> change BE code
 class ChatRequest(BaseModel):
@@ -25,6 +30,8 @@ class FileRequest(BaseModel):
 
 
 # Define the output structures (what you want from the LLM)
+
+# OLD for testing
 class AnalysisOutput(BaseModel):
     heading: str = Field(description="A professional heading for the dataset")
     description: str = Field(description="A 2-3 sentence summary of the data content")
