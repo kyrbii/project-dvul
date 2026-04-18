@@ -6,14 +6,11 @@ from langchain_core.messages import trim_messages
 # Me
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
 import os
 from typing import List, Dict, Any, Type
 from pydantic import BaseModel, Field
 from models.messages import ChatRequest, ChatResponse, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse, T
 
-# --- 2. Setup the LLM & History Store ---
-#llm = ChatNVIDIA(model="moonshot/kimi-2.5k").with_structured_output(AnalysisResponse, include_raw=True)
 store = {}
 
 def get_session_history(session_id: str):
@@ -21,7 +18,6 @@ def get_session_history(session_id: str):
         store[session_id] = ChatMessageHistory()
     return store[session_id]
 
-# --- 3. The Prompt Template (File Info is "Hardcoded" in System) ---
 
 def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
     return ChatNVIDIA(
@@ -34,10 +30,11 @@ def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
     
 
 # --- 5. The Execution Function with History Limiting ---
-def chat_with_file(request: FileRequest, session_id: str, limit: int = 10):
-    history = get_session_history(session_id)
+def agent_call(request: FileRequest, limit: int = 10):
+    history = get_session_history(request.session_id)
 
-    agent = get_agent(AnalysisResponse, True)
+    agent = get_agent(AnalysisOutput, True)
+    # agent = get_agent(AnalysisResponse, True)
 
     if not request.user_message:
         request.user_message = "Give me a summary of the data."

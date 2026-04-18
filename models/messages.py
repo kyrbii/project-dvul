@@ -24,6 +24,7 @@ class FileInfo(BaseModel):
     preview: List[Dict[str, Any]]
 
 class FileRequest(BaseModel):
+    session_id: str = Field(description="ID of the conversation/chat")
     user_message: str = Field(description="User prompt / description")
     file_info: FileInfo = Field(description="File keyfacts for Analysis by LLM")
     file_preview: List[Dict[str, Any]] = Field(description="File preview for Analysis by LLM")
