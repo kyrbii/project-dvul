@@ -1,6 +1,7 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
 from models.messages import FileInfo, AnalysisOutput, ChatRequest, ChatResponse, FileRequest
+from backend.llm.llm_connection import agent_call
 import json
 import os
 from typing import Any, Dict
@@ -38,8 +39,9 @@ def get_response(message: str) -> str:
 
 
 def get_response_with_file(request: FileRequest) -> ChatResponse:
+  response = agent_call(request, limit = 10)
   return ChatResponse(
-    bot_message="This is a placeholder for the chat with file",
+    bot_message=response.heading + "\n" + response.description,
     plot_reference=[]
   )
 

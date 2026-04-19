@@ -30,10 +30,10 @@ def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
     
 
 # --- 5. The Execution Function with History Limiting ---
-def agent_call(request: FileRequest, limit: int = 10):
+def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
     history = get_session_history(request.session_id)
 
-    agent = get_agent(AnalysisOutput, True)
+    agent = get_agent(response_model, response_model_raw)
     # agent = get_agent(AnalysisResponse, True)
 
     if not request.user_message:
