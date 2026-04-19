@@ -1,5 +1,6 @@
 name: Docker Build
 
+#you can add your branch name here if you want to trigger the workflow on push to that branch
 on:
   push:
     branches: [main, feature/docker-file]
