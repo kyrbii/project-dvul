@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
 import numpy as np
 import pandas as pd
-from backend.llm.service import get_response, get_response_with_file, get_llm_response
+from backend.llm.service import get_llm_response
 from models.messages import ChatRequest
 import dotenv
 
@@ -39,7 +39,7 @@ def chat(request: ChatRequest):
     
     return {
         "chat_id": request.chat_id,
-        "response": response.model_dump()
+        "response": response
     }
 
 

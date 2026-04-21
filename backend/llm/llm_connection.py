@@ -15,7 +15,7 @@ from models.messages import ChatRequest, ChatResponse, FileRequest, AnalysisOutp
 
 # return the chat history from the session_id and session store
 def get_session_history(store: Dict[str, Any]):
-    if not store["messages"]:
+    if "messages" not in store:
         store["messages"] = ChatMessageHistory()
     return store["messages"]
 
@@ -33,7 +33,6 @@ def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
 # The main execution Function with History Limiting
 def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
     history = get_session_history(chat_store)
-
     agent = get_agent(response_model, response_model_raw)
     # agent = get_agent(AnalysisResponse, True)
 
@@ -74,7 +73,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T]
     # Store messages manually because we are using structured output (with include_raw=True)
     if not user_message_empty:
         history.add_user_message(message)
-    history.add_message(response["raw"]) # Stores the LLM's full internal response
+    history.add_message(response)#["raw"]) # Stores the LLM's full internal response
     
-    return chat_store, response["parsed"]
+    return chat_store, response#["parsed"]
 
