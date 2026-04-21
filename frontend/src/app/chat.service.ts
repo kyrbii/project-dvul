@@ -4,11 +4,15 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 export interface ChatResponse {
-  response: string;
+  chat_id: string;
+  response: {
+    bot_message: string;
+    plot_reference: number[];
+  };
 }
 
 export interface UploadResponse {
-  response: string;
+  chat_id: string;
 }
 
 @Injectable({
@@ -31,8 +35,12 @@ export class ChatService {
   }
 
   // Chat-Nachricht senden (nach CSV-Upload)
-  sendMessage(message: string): Observable<ChatResponse> {
-    return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, { message })
+  sendMessage(message: string, chatId?: string): Observable<ChatResponse> {
+    const payload = { 
+      message,
+      chat_id: chatId 
+    };
+    return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload)
       .pipe(
         catchError(this.handleError)
       );
