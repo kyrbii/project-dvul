@@ -32,10 +32,12 @@ class FileRequest(BaseModel):
 
 # Define the output structures (what you want from the LLM)
 
-# OLD for testing
+##### ONLY FOR TESTING
 class AnalysisOutput(BaseModel):
     heading: str = Field(description="A professional heading for the dataset")
     description: str = Field(description="A 2-3 sentence summary of the data content")
+##### END
+
 
 class PlotAction(BaseModel):
     title: str = Field(description="A short title for this specific plot")

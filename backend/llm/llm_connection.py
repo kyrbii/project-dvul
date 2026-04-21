@@ -11,14 +11,17 @@ from typing import List, Dict, Any, Type
 from pydantic import BaseModel, Field
 from models.messages import ChatRequest, ChatResponse, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse, T
 
+
+# Should this be here? Maybe the session/chat store should be handled by the function arguments?
 store = {}
 
+# return the chat history from the session_id and session store
 def get_session_history(session_id: str):
     if session_id not in store:
         store[session_id] = ChatMessageHistory()
     return store[session_id]
 
-
+# the llm agent
 def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
     return ChatNVIDIA(
       model=os.getenv("LLM_MODEL"),
@@ -29,7 +32,7 @@ def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
       ).with_structured_output(response_model, include_raw=raw)
     
 
-# --- 5. The Execution Function with History Limiting ---
+# The main execution Function with History Limiting
 def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
     history = get_session_history(request.session_id)
 
@@ -64,7 +67,11 @@ def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, r
         "chat_history": trimmed_history
     }
     
-    response = chain.invoke(input_data)
+    try:
+        response = chain.invoke(input_data)
+    except Exception as e:  # ToDo: More specific exception with logging
+        print(e)
+        return e
     
     # Store messages manually because we are using structured output (with include_raw=True)
     if not user_message_empty:

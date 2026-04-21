@@ -9,20 +9,15 @@ import dotenv
 
 dotenv.load_dotenv()
 
+### PLACEHOLDER
 def get_response(request: ChatRequest) -> ChatResponse:
   return ChatResponse(
     bot_message="This is a placeholder for the chat without file",
     plot_reference=[]
   )
 
+### OLD
 def get_response(message: str) -> str:
-    # TODO: Add temperature to environment variables
-    # TODO: Add top_p to environment variables
-    # TODO: Add max_completion_tokens to environment variables
-    # TODO: Add thinking mode to environment variables
-    
-    # define the API Client
-
     client = ChatNVIDIA(
       model=os.getenv("LLM_MODEL"),
       api_key= os.getenv("LLM_API_KEY"),
@@ -30,21 +25,27 @@ def get_response(message: str) -> str:
       top_p=1,
       max_completion_tokens=16384,
     )
-
-    # get the response
     response = client.invoke([{"role":"user","content":message}])
-      
     return response.content
 
 
-
+### NEW - wrong name, will be replaced
 def get_response_with_file(request: FileRequest) -> ChatResponse:
-  response = agent_call(request, limit = 10)
+  try:
+    response = agent_call(request, response_model = AnalysisOutput, response_model_raw = True, limit = 10)
+  except Exception as e:  # ToDo: More specific exception with logging
+    print(e)
+    return ChatResponse(
+      bot_message="Error: Could not get response from the LLM. Maybe try again."+str(e),
+      plot_reference=[]
+    )
+
   return ChatResponse(
     bot_message=response.heading + "\n" + response.description,
     plot_reference=[]
   )
 
+### OLD - remove after Testing with new function -> Outsourced to llm_connection.py
 def get_response_with_file(data: Dict[str, Any]) -> dict:
     # Validate the incoming dictionary against our model
     file_info = FileInfo(**data)
