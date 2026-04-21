@@ -10,6 +10,7 @@ T = TypeVar("T", bound=BaseModel)
 # ToDo: Change to user_message -> change BE code
 class ChatRequest(BaseModel):
     message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
+    chat_id: str | None = None
 
 class ChatResponse(BaseModel):
     bot_message: str = Field(description="Response to the user_message to be displayed in chat")

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from itertools import count
 import numpy as np
 import pandas as pd
 from backend.llm.service import get_response, get_response_with_file, get_llm_response
@@ -18,13 +19,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+chat_counter = count(1)
 chat_store = {}
-file_store = []
 
 @app.post("/chat")
 def chat(request: ChatRequest):
-    return {"response": get_response(request.message)}
+
+    if request.chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+
+    df = chat_store[request.chat_id]["dataframe"]
+    filename = chat_store[request.chat_id]["filename"]
+
+    response = get_llm_response(
+        chat_id=request.chat_id,
+        message=request.message
+    )
+
+    return {
+        "chat_id": request.chat_id,
+        "response": response
+    }
+
 
 @app.post("/upload-csv")
 async def upload_csv(file: UploadFile = File(...)):
@@ -36,23 +52,17 @@ async def upload_csv(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(status_code=400, detail="CSV-Datei konnte nicht gelesen werden.")
     
+    chat_id = f"chat_{next(chat_counter)}"
+
+    chat_store[chat_id] = {
+        "filename": file.filename,
+        "dataframe": df,
+        "messages": [] 
+    }
+    
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
     
     # Let the model analyze the file
     return {
-        "response": get_response_with_file({
-            "whole Dataframe": df,
-            "filename": file.filename,
-            "rows": len(df),
-            "columns": df.columns.tolist(),
-            "preview": df.describe()
-        })
-    }
-
-    
-    # return {
-    #     "filename": file.filename,
-    #     "rows": len(df),
-    #     "columns": df.columns.tolist(),
-    #     "preview": preview_df.to_dict(orient="records")
-    # }
+        "chat_id": chat_id
+        }
