@@ -73,7 +73,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T]
     # Store messages manually because we are using structured output (with include_raw=True)
     if not user_message_empty:
         history.add_user_message(message)
-    history.add_message(response)#["raw"]) # Stores the LLM's full internal response
+    history.add_message(str(response))#["raw"]) # Stores the LLM's full internal response
     
     return chat_store, response#["parsed"]
 
