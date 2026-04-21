@@ -30,7 +30,7 @@ def get_response(message: str) -> str:
 
 
 ### NEW - wrong name, will be replaced
-def get_response_with_file(request: FileRequest) -> ChatResponse:
+def get_llm_response(request: FileRequest) -> ChatResponse:
   try:
     response = agent_call(request, response_model = AnalysisOutput, response_model_raw = True, limit = 10)
   except Exception as e:  # ToDo: More specific exception with logging

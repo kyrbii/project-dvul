@@ -2,14 +2,13 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pandas as pd
-from backend.llm.service import get_response, get_response_with_file#
+from backend.llm.service import get_response, get_response_with_file, get_llm_response
 from models.messages import ChatRequest
 import dotenv
 
 dotenv.load_dotenv()
 
 app = FastAPI()
-
 
 # Add CORS middleware
 app.add_middleware(
