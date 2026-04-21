@@ -10,6 +10,7 @@ dotenv.load_dotenv()
 
 app = FastAPI()
 
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -18,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+chat_store = {}
+file_store = []
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -38,12 +42,14 @@ async def upload_csv(file: UploadFile = File(...)):
     # Let the model analyze the file
     return {
         "response": get_response_with_file({
+            "whole Dataframe": df,
             "filename": file.filename,
             "rows": len(df),
             "columns": df.columns.tolist(),
-            "preview": preview_df.to_dict(orient="records")
+            "preview": df.describe()
         })
     }
+
     
     # return {
     #     "filename": file.filename,
