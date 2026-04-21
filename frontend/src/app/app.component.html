@@ -1,0 +1,120 @@
+<div class="page-shell">
+  <div class="layout-grid">
+    <section class="panel left-top">
+      <div class="panel-header">
+        <h2>Zusammenfassung</h2>
+      </div>
+      <div class="panel-body placeholder-box">
+        <p>Hier wird später die Zusammenfassung angezeigt.</p>
+      </div>
+    </section>
+
+    <section class="panel left-bottom">
+      <div class="panel-header history-header">
+        <div>
+          <h2>Chats</h2>
+          <p class="hint">Neue Chat-Sessions mit eigener CSV erstellen</p>
+        </div>
+        <button class="primary-button" (click)="createNewChat()">+ Neuer Chat</button>
+      </div>
+      <div class="panel-body history-list">
+        <ng-container *ngIf="chats.length; else noChatList">
+          <button
+            class="history-item"
+            *ngFor="let chat of chats"
+            [class.active]="chat === selectedChat"
+            (click)="selectChat(chat)"
+          >
+            <div class="history-title">{{ chat.name }}</div>
+            <div class="history-meta">{{ chat.uploadedFileName || 'Keine CSV' }}</div>
+          </button>
+        </ng-container>
+        <ng-template #noChatList>
+          <div class="empty-state">
+            <p>Erstelle einen neuen Chat, um loszulegen.</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+
+    <main class="panel center-panel">
+      <section class="overview-section">
+        <div class="overview-header">
+          <h1>Übersicht</h1>
+        </div>
+        <div class="overview-body">
+          <p>{{ overviewText }}</p>
+        </div>
+      </section>
+
+      <section class="chat-section">
+        <div class="chat-title-row">
+          <div>
+            <h2>CSV Assistent</h2>
+            <p class="hint">Lade eine CSV hoch oder stelle Fragen zu deinen Daten.</p>
+          </div>
+        </div>
+
+        <div class="chat-window" #chatWindow>
+          <ng-container *ngIf="selectedChat && selectedChat.messages.length; else emptyChat">
+            <div class="message-row" *ngFor="let message of selectedChat.messages">
+              <div [class.user]="message.role === 'user'" [class.bot]="message.role === 'bot'" class="message-bubble">
+                <div class="message-content">{{ message.content }}</div>
+                <div class="message-time">{{ message.timestamp }}</div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-template #emptyChat>
+            <div class="empty-chat-placeholder">
+              <p>Es wurde noch keine CSV Datei hochgeladen.</p>
+              <p>Erstelle einen Chat und lade eine CSV hoch, um loszulegen.</p>
+            </div>
+          </ng-template>
+        </div>
+
+        <form class="chat-form" (ngSubmit)="sendMessage()">
+          <div class="upload-section">
+            <label class="upload-label full-width" [class.disabled]="hasCsvInChat">
+              <span *ngIf="!isCsvUploaded">CSV hochladen</span>
+              <span *ngIf="isCsvUploaded" class="uploaded-file">
+                {{ tempUploadedFile?.name }}
+                <button type="button" class="remove-file-btn" (click)="removeCsv(); $event.stopPropagation()">×</button>
+              </span>
+              <span *ngIf="hasCsvInChat" class="tooltip">Es wurde bereits eine CSV Datei zur Analyse hochgeladen. Für ein weiteres Hochladen bitte neuen Chat eröffnen.</span>
+              <input 
+                type="file" 
+                accept=".csv" 
+                (change)="onFileSelected($event)" 
+                [disabled]="hasCsvInChat"
+              />
+            </label>
+          </div>
+          <div class="message-input-row">
+            <input
+              type="text"
+              name="message"
+              placeholder="Frage oder Nachricht eingeben"
+              [(ngModel)]="draftMessage"
+              [disabled]="!selectedChat"
+              class="message-input"
+            />
+            <button type="submit" [disabled]="!canSendMessage || isLoading" class="send-button">
+              <span *ngIf="!isLoading">Senden</span>
+              <span *ngIf="isLoading">Lädt...</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <aside class="panel right-panel">
+      <div class="panel-header">
+        <h2>Diagramme</h2>
+      </div>
+      <div class="panel-body placeholder-box">
+        <p>Hier erscheinen später Linien-, Balken- und Kreisdiagramme.</p>
+      </div>
+    </aside>
+  </div>
+</div>
