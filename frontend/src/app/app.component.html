@@ -55,7 +55,7 @@
           </div>
         </div>
 
-        <div class="chat-window">
+        <div class="chat-window" #chatWindow>
           <ng-container *ngIf="selectedChat && selectedChat.messages.length; else emptyChat">
             <div class="message-row" *ngFor="let message of selectedChat.messages">
               <div [class.user]="message.role === 'user'" [class.bot]="message.role === 'bot'" class="message-bubble">
@@ -99,9 +99,9 @@
               [disabled]="!selectedChat"
               class="message-input"
             />
-            <button type="submit" [disabled]="!canSendMessage" class="send-button">
-              Senden
-              <span *ngIf="!canSendMessage && selectedChat && selectedChat.messages.length === 0" class="tooltip">Bitte eine CSV Datei hochladen</span>
+            <button type="submit" [disabled]="!canSendMessage || isLoading" class="send-button">
+              <span *ngIf="!isLoading">Senden</span>
+              <span *ngIf="isLoading">Lädt...</span>
             </button>
           </div>
         </form>

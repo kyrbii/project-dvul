@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild, ElementRef } from '@angular/core';
+import { ChatService } from './chat.service';
 
 interface ChatMessage {
   role: 'user' | 'bot';
@@ -25,8 +26,11 @@ export class AppComponent {
   chats: ChatSession[] = [];
   nextChatId = 1;
   tempUploadedFile: File | null = null; // Temporäre CSV-Datei
+  isLoading = false; // Für Ladezustand
 
-  constructor() {
+  @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
+
+  constructor(private chatService: ChatService) {
     // Automatisch ersten Chat erstellen
     this.createNewChat();
   }
@@ -109,49 +113,104 @@ export class AppComponent {
   }
 
   sendMessage(): void {
-    if (!this.selectedChat || !this.canSendMessage) {
+    if (!this.selectedChat || !this.canSendMessage || this.isLoading) {
       return;
     }
 
+    const currentChat = this.selectedChat;
     const message = this.draftMessage.trim();
-    const hasCsv = !!this.tempUploadedFile;
+    const uploadedFile = this.tempUploadedFile;
+    const previousUploadedFileName = currentChat.uploadedFileName;
+    const hasCsv = !!uploadedFile;
     const hasText = !!message;
 
     if (!hasCsv && !hasText) {
       return;
     }
 
-    let content = '';
+    this.isLoading = true;
+
+    // User-Nachricht im Chat anzeigen
+    let userContent = '';
     if (hasCsv && hasText) {
-      content = `CSV: ${this.tempUploadedFile!.name}\n${message}`;
+      userContent = `CSV: ${uploadedFile!.name}\n${message}`;
     } else if (hasCsv) {
-      content = `CSV: ${this.tempUploadedFile!.name}`;
+      userContent = `CSV: ${uploadedFile!.name}`;
     } else {
-      content = message;
+      userContent = message;
     }
 
-    // Nachricht zum Chat hinzufügen
-    this.selectedChat.messages.push({
+    currentChat.messages.push({
       role: 'user',
-      content: content,
+      content: userContent,
       timestamp: this.timeStamp(),
     });
 
-    // Bot-Antwort simulieren
-    this.selectedChat.messages.push({
-      role: 'bot',
-      content: 'Antwort folgt. CSV-Analyse wird später hier integriert.',
-      timestamp: this.timeStamp(),
-    });
+    this.scrollToBottom();
 
-    // CSV dauerhaft im Chat speichern (nur beim ersten Mal)
-    if (hasCsv && !this.selectedChat.uploadedFileName) {
-      this.selectedChat.uploadedFileName = this.tempUploadedFile!.name;
-    }
-
-    // Temporäre Datei zurücksetzen
-    this.tempUploadedFile = null;
+    // Textfeld sofort leeren
     this.draftMessage = '';
+
+    // API-Call machen
+    if (hasCsv && uploadedFile) {
+      // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
+      currentChat.uploadedFileName = uploadedFile.name;
+
+      // CSV uploaden
+      this.chatService.uploadCsv(uploadedFile).subscribe({
+        next: (response) => {
+          this.handleApiResponse(response.response, currentChat);
+          this.tempUploadedFile = null;
+          this.draftMessage = '';
+          this.isLoading = false;
+        },
+        error: (error) => {
+          // uploadedFileName bleibt gesetzt, damit das Feld inaktiv bleibt
+          this.handleApiError(error, currentChat);
+          this.isLoading = false;
+        }
+      });
+    } else {
+      // Normale Chat-Nachricht
+      this.chatService.sendMessage(message).subscribe({
+        next: (response) => {
+          this.handleApiResponse(response.response, currentChat);
+          this.draftMessage = '';
+          this.isLoading = false;
+        },
+        error: (error) => {
+          this.handleApiError(error, currentChat);
+          this.isLoading = false;
+        }
+      });
+    }
+  }
+
+  private handleApiResponse(response: string, chat: ChatSession): void {
+    chat.messages.push({
+      role: 'bot',
+      content: response,
+      timestamp: this.timeStamp(),
+    });
+    this.scrollToBottom();
+  }
+
+  private handleApiError(error: any, chat: ChatSession): void {
+    const errorMessage = error.message || 'Fehler bei der Kommunikation mit dem Backend';
+    chat.messages.push({
+      role: 'bot',
+      content: `❌ ${errorMessage}`,
+      timestamp: this.timeStamp(),
+    });
+    this.scrollToBottom();
+  }
+
+  private scrollToBottom(): void {
+    if (this.chatWindow) {
+      setTimeout(() => {
+        this.chatWindow.nativeElement.scrollTop = this.chatWindow.nativeElement.scrollHeight;
+      }, 0);
+    }
   }
 
   private timeStamp(): string {
