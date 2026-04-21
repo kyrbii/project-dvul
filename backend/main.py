@@ -31,14 +31,15 @@ def chat(request: ChatRequest):
     df = chat_store[request.chat_id]["dataframe"]
     filename = chat_store[request.chat_id]["filename"]
 
-    response = get_llm_response(
-        chat_id=request.chat_id,
+    
+    chat_store[request.chat_id], response = get_llm_response(
+        chat_store[request.chat_id],
         message=request.message
     )
-
+    
     return {
         "chat_id": request.chat_id,
-        "response": response
+        "response": response.model_dump()
     }
 
 
@@ -56,8 +57,7 @@ async def upload_csv(file: UploadFile = File(...)):
 
     chat_store[chat_id] = {
         "filename": file.filename,
-        "dataframe": df,
-        "messages": [] 
+        "dataframe": df
     }
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)

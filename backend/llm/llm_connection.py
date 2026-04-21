@@ -12,14 +12,12 @@ from pydantic import BaseModel, Field
 from models.messages import ChatRequest, ChatResponse, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse, T
 
 
-# Should this be here? Maybe the session/chat store should be handled by the function arguments?
-store = {}
 
 # return the chat history from the session_id and session store
-def get_session_history(session_id: str):
-    if session_id not in store:
-        store[session_id] = ChatMessageHistory()
-    return store[session_id]
+def get_session_history(store: Dict[str, Any]):
+    if not store["messages"]:
+        store["messages"] = ChatMessageHistory()
+    return store["messages"]
 
 # the llm agent
 def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
@@ -33,14 +31,14 @@ def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
     
 
 # The main execution Function with History Limiting
-def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
-    history = get_session_history(request.session_id)
+def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
+    history = get_session_history(chat_store)
 
     agent = get_agent(response_model, response_model_raw)
     # agent = get_agent(AnalysisResponse, True)
 
-    if not request.user_message:
-        request.user_message = "Give me a summary of the data."
+    if not message:
+        message = "Give me a summary of the data."
         user_message_empty = True
     else: 
         user_message_empty = False
@@ -59,11 +57,11 @@ def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, r
 
     # Run the chain
     input_data = {
-        "filename": request.file_info.filename,
-        "rows": request.file_info.rows,
-        "columns": request.file_info.columns,
-        "preview": request.file_preview,
-        "user_input": request.user_message,
+        "filename": chat_store["filename"],
+        "rows": chat_store["dataframe"].shape[0],
+        "columns": list(chat_store["dataframe"].columns),
+        "preview": chat_store["dataframe"].head(5).to_dict(orient="records"),
+        "user_input": message,
         "chat_history": trimmed_history
     }
     
@@ -75,8 +73,8 @@ def agent_call(request: FileRequest, response_model: Type[T] = AnalysisOutput, r
     
     # Store messages manually because we are using structured output (with include_raw=True)
     if not user_message_empty:
-        history.add_user_message(request.user_message)
+        history.add_user_message(message)
     history.add_message(response["raw"]) # Stores the LLM's full internal response
     
-    return response["parsed"]
+    return chat_store, response["parsed"]
 
