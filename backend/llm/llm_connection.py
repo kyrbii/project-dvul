@@ -20,21 +20,23 @@ def get_session_history(store: Dict[str, Any]):
     return store["messages"]
 
 # the llm agent
-def get_agent(response_model: Type[T], raw: bool = True) -> ChatNVIDIA:
-    return ChatNVIDIA(
+def get_agent(response_model: Type[T] = None, raw: bool = True) -> ChatNVIDIA:
+    agent = ChatNVIDIA(
       model=os.getenv("LLM_MODEL"),
       api_key= os.getenv("LLM_API_KEY"),
       temperature=0.1,
       top_p=1,
       max_completion_tokens=16384,
-      ).with_structured_output(response_model, include_raw=raw)
+    )
+    if response_model:
+        return agent.with_structured_output(response_model, include_raw=raw)
+    return agent
     
 
 # The main execution Function with History Limiting
-def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T] = AnalysisOutput, response_model_raw: bool = True, limit: int = 10):
+def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T] = None, response_model_raw: bool = True, limit: int = 10):
     history = get_session_history(chat_store)
     agent = get_agent(response_model, response_model_raw)
-    # agent = get_agent(AnalysisResponse, True)
 
     if not message:
         message = "Give me a summary of the data."
@@ -70,10 +72,14 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T]
         print(e)
         return e
     
-    # Store messages manually because we are using structured output (with include_raw=True)
+    # Store messages manually
     if not user_message_empty:
         history.add_user_message(message)
-    history.add_message(str(response))#["raw"]) # Stores the LLM's full internal response
     
-    return chat_store, response#["parsed"]
+    if response_model:
+        history.add_message(str(response)) 
+        return chat_store, response
+    else:
+        history.add_message(response)
+        return chat_store, response.content
 

@@ -12,7 +12,7 @@ dotenv.load_dotenv()
 
 def get_llm_response(chat_store: Dict[str, Any], message: str) -> ChatResponse:
   try:
-    chat_store, response = agent_call(chat_store, message, response_model = AnalysisOutput, response_model_raw = False, limit = 10)
+    chat_store, bot_message = agent_call(chat_store, message, limit = 10)
   except Exception as e:  # ToDo: More specific exception with logging
     print(e)
     return chat_store, ChatResponse(
@@ -21,6 +21,6 @@ def get_llm_response(chat_store: Dict[str, Any], message: str) -> ChatResponse:
     )
 
   return chat_store, ChatResponse(
-    bot_message=response.heading + "\n" + response.description,
+    bot_message=bot_message,
     plot_reference=[]
   )
