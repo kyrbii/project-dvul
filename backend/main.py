@@ -27,10 +27,6 @@ def chat(request: ChatRequest):
 
     if request.chat_id not in chat_store:
         raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
-
-    df = chat_store[request.chat_id]["dataframe"]
-    filename = chat_store[request.chat_id]["filename"]
-
     
     chat_store[request.chat_id], response = get_llm_response(
         chat_store[request.chat_id],
