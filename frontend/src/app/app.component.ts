@@ -11,6 +11,7 @@ interface ChatSession {
   id: number;
   name: string;
   uploadedFileName?: string;
+  backendChatId?: string; // ID vom Backend (chat_1, chat_2, etc.)
   messages: ChatMessage[];
   createdAt: string;
 }
@@ -46,12 +47,12 @@ export class AppComponent {
 
   get canSendMessage(): boolean {
     if (!this.selectedChat) return false;
-    
+
     // Erste Nachricht: Muss CSV haben
     if (this.selectedChat.messages.length === 0) {
       return !!this.tempUploadedFile;
     }
-    
+
     // Nach CSV-Upload: Immer senden möglich (Text oder Text+CSV)
     return true;
   }
@@ -96,15 +97,15 @@ export class AppComponent {
     if (!file || !this.selectedChat) {
       return;
     }
-    
+
     // Temporär speichern (noch nicht in Chat überführen)
     this.tempUploadedFile = file;
-    
+
     // Chat-Namen setzen, wenn noch nicht geschehen
     if (!this.selectedChat.uploadedFileName) {
       this.selectedChat.name = file.name.replace('.csv', '');
     }
-    
+
     input.value = '';
   }
 
@@ -153,37 +154,41 @@ export class AppComponent {
 
     // API-Call machen
     if (hasCsv && uploadedFile) {
-      // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
-      currentChat.uploadedFileName = uploadedFile.name;
-
-      // CSV uploaden
       this.chatService.uploadCsv(uploadedFile).subscribe({
-        next: (response) => {
-          this.handleApiResponse(response.response, currentChat);
+        next: (uploadResponse) => {
+          // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
+          currentChat.backendChatId = uploadResponse.chat_id;
+          currentChat.uploadedFileName = uploadedFile.name;
           this.tempUploadedFile = null;
-          this.draftMessage = '';
-          this.isLoading = false;
+
+          // 2. Sofort die eigentliche Nachricht hinterher (mit chat_id)
+          this.callChatApi(message, currentChat);
         },
         error: (error) => {
-          // uploadedFileName bleibt gesetzt, damit das Feld inaktiv bleibt
           this.handleApiError(error, currentChat);
           this.isLoading = false;
         }
       });
+    } else if (currentChat.backendChatId) {
+      // Normale Nachricht mit existierender Chat-ID
+      this.callChatApi(message, currentChat);
     } else {
-      // Normale Chat-Nachricht
-      this.chatService.sendMessage(message).subscribe({
-        next: (response) => {
-          this.handleApiResponse(response.response, currentChat);
-          this.draftMessage = '';
-          this.isLoading = false;
-        },
-        error: (error) => {
-          this.handleApiError(error, currentChat);
-          this.isLoading = false;
-        }
-      });
+      // Sollte eigentlich nicht passieren (canSendMessage verhindert das ohne CSV/ID)
+      this.isLoading = false;
     }
+  }
+
+  private callChatApi(message: string, chat: ChatSession): void {
+    this.chatService.sendMessage(message, chat.backendChatId).subscribe({
+      next: (response) => {
+        this.handleApiResponse(response.response.bot_message, chat);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        this.handleApiError(error, chat);
+        this.isLoading = false;
+      }
+    });
   }
 
   private handleApiResponse(response: string, chat: ChatSession): void {

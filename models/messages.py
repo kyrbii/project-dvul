@@ -1,10 +1,16 @@
-from typing import List, Any, Dict
+from typing import List, Any, Dict, TypeVar
 from pydantic import BaseModel, Field
 
+# featured models:
+# ChatRequest, ChatResponse, FileInfo, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse
+
+# Generic Type for any Pydantic model
+T = TypeVar("T", bound=BaseModel)
 
 # ToDo: Change to user_message -> change BE code
 class ChatRequest(BaseModel):
     message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
+    chat_id: str | None = None
 
 class ChatResponse(BaseModel):
     bot_message: str = Field(description="Response to the user_message to be displayed in chat")
@@ -19,15 +25,20 @@ class FileInfo(BaseModel):
     preview: List[Dict[str, Any]]
 
 class FileRequest(BaseModel):
+    session_id: str = Field(description="ID of the conversation/chat")
     user_message: str = Field(description="User prompt / description")
     file_info: FileInfo = Field(description="File keyfacts for Analysis by LLM")
     file_preview: List[Dict[str, Any]] = Field(description="File preview for Analysis by LLM")
 
 
 # Define the output structures (what you want from the LLM)
+
+##### ONLY FOR TESTING
 class AnalysisOutput(BaseModel):
     heading: str = Field(description="A professional heading for the dataset")
     description: str = Field(description="A 2-3 sentence summary of the data content")
+##### END
+
 
 class PlotAction(BaseModel):
     title: str = Field(description="A short title for this specific plot")

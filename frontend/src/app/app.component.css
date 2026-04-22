@@ -201,6 +201,7 @@
   border-radius: 18px;
   position: relative;
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .message-bubble.user {
