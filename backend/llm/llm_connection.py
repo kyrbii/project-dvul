@@ -1,7 +1,5 @@
 # Gemini
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.messages import trim_messages
-
 # Me
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
