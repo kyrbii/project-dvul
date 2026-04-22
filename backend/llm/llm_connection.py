@@ -4,10 +4,8 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import os
-from typing import List, Dict, Any, Type
-from pydantic import BaseModel, Field
-from models.messages import ChatRequest, ChatResponse, FileRequest, AnalysisOutput, PlotAction, AnalysisResponse, T
-
+from typing import Dict, Any, Type
+import models.messages as models
 
 
 # return the chat history from the session_id and session store
@@ -17,7 +15,7 @@ def get_session_history(store: Dict[str, Any]):
     return store["messages"]
 
 # the llm agent
-def get_agent(response_model: Type[T] = None, raw: bool = True) -> ChatNVIDIA:
+def get_agent(response_model: Type[models.T] = None, raw: bool = True) -> ChatNVIDIA:
     agent = ChatNVIDIA(
       model=os.getenv("LLM_MODEL"),
       api_key= os.getenv("LLM_API_KEY"),
@@ -31,7 +29,7 @@ def get_agent(response_model: Type[T] = None, raw: bool = True) -> ChatNVIDIA:
     
 
 # The main execution Function with History Limiting
-def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[T] = None, response_model_raw: bool = True, limit: int = 10):
+def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[models.T] = None, response_model_raw: bool = True, limit: int = 10):
     history = get_session_history(chat_store)
     agent = get_agent(response_model, response_model_raw)
 
