@@ -1,12 +1,14 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
+from models.messages import PlotCodeOutput
 import os
+import yaml
 from typing import Dict, Any
 
-class PlotCodeOutput(BaseModel):
-    title: str = Field(description="A short title for the plot")
-    code: str = Field(description="Self-contained Python code using 'df' and 'plt' to create an SVG plot. Do NOT use plt.show().")
+def load_prompts():
+    path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
 def get_plot_code(instructions: str, context: Dict[str, Any]) -> PlotCodeOutput:
     """
@@ -18,8 +20,9 @@ def get_plot_code(instructions: str, context: Dict[str, Any]) -> PlotCodeOutput:
         temperature=0.1
     ).with_structured_output(PlotCodeOutput)
     
+    all_prompts = load_prompts()
     prompt = ChatPromptTemplate.from_messages([
-        ("system", os.getenv("LLM_SYS_PROMPT_plots")),
+        ("system", all_prompts["agent_prompts"]["plot_agent"]),
         ("user", "Instructions: {instructions}\n\nContext:\nFilename: {filename}\nColumns: {columns}\nPreview: {preview}")
     ])
     

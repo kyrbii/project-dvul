@@ -3,23 +3,30 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
+from langchain_core.messages import SystemMessage, HumanMessage
 import langchain
 import os
 import pandas as pd
-from typing import Dict, Any, Type
-import models.messages as models
+from typing import Dict, Any
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
 
 langchain.debug = True
 # --- Utility Functions ---
 
+import yaml
+
+def load_prompts():
+    path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
 def get_session_history(store: Dict[str, Any]):
     if "messages" not in store:
         store["messages"] = ChatMessageHistory()
     return store["messages"]
 
-def get_agent(response_model: Type[models.T] = None, raw: bool = True) -> ChatNVIDIA:
+def get_agent() -> ChatNVIDIA:
     return ChatNVIDIA(
         model=os.getenv("LLM_MODEL"),
         api_key=os.getenv("LLM_API_KEY"), 
@@ -27,17 +34,16 @@ def get_agent(response_model: Type[models.T] = None, raw: bool = True) -> ChatNV
         top_p=1,
         max_tokens=16384,
         model_kwargs={
-            "enable_thinking": True,
             "reasoning_budget": 2048 # Moved here to avoid warning
         },  
     )
 
 # --- Tool Factory ---
 
-def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
+def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store: Dict[str, Any]):
     """
     Factory function to create tools with access to a specific DataFrame and metadata.
-    Defining tools here allows them to capture 'df' and 'context' in their closure.
+    Defining tools here allows them to capture 'df', 'context', and 'chat_store' in their closure.
     """
 
     @tool
@@ -117,17 +123,47 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
         """
         The ONLY tool for generating visualizations (plots, charts, histograms).
         Provide clear natural language instructions. This tool will handle all the complex 
-        plotting logic and return a path to the generated SVG image.
+        plotting logic and return a confirmation message.
         """
         print(f"DEBUG: Agent requested plot: {instructions}")
         try:
-            # 1. Get code from Plot Agent (using captured context)
+            # 1. Get code from Plot Agent
             plot_data = get_plot_code(instructions, context)
-            print(f"DEBUG: Plot Agent generated code for '{plot_data.title}'")
-            # 2. Execute code in Sandbox
-            result = execute_plot_code(plot_data.code, df)
-            print(f"DEBUG: Plot generated at {result}")
-            return result
+            
+            # 2. Execute code in Sandbox (returns SVG string)
+            svg_data = execute_plot_code(plot_data.code, df)
+            
+            if svg_data.startswith("Sandbox Error"):
+                return svg_data
+
+            # 3. Store plot in chat_store
+            if "plots" not in chat_store:
+                chat_store["plots"] = []
+            
+            plot_entry = {
+                "title": plot_data.title,
+                "svg": svg_data
+            }
+            chat_store["plots"].append(plot_entry)
+            plot_index = len(chat_store["plots"])
+            
+            # --- DEBUGGING: Save to Disk ---
+            try:
+                import os
+                debug_dir = "debug_plots"
+                os.makedirs(debug_dir, exist_ok=True)
+                # Clean title for filename
+                safe_title = "".join([c if c.isalnum() else "_" for c in plot_data.title])
+                debug_path = os.path.join(debug_dir, f"plot_{plot_index}_{safe_title}.svg")
+                with open(debug_path, "w") as f:
+                    f.write(svg_data)
+                print(f"DEBUG: Plot saved to disk at {debug_path}")
+            except Exception as disk_e:
+                print(f"DEBUG: Failed to save debug plot: {str(disk_e)}")
+            # -------------------------------
+
+            print(f"DEBUG: Plot #{plot_index} ({plot_data.title}) generated and stored.")
+            return f"Plot successfully generated and stored as Plot #{plot_index}: '{plot_data.title}'"
         except Exception as e:
             print(f"DEBUG: generate_plot error: {str(e)}")
             return f"Error generating plot: {str(e)}"
@@ -142,16 +178,38 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
         generate_plot
     ]
 
+def _force_final_answer(llm: ChatNVIDIA, question: str, intermediate_steps: list) -> str:
+    """
+    Called when the agent hits max_iterations without producing a final answer.
+    Sends all intermediate work to the LLM and asks it to summarize into a coherent reply.
+    """
+    steps_summary = []
+    for action, observation in intermediate_steps:
+        steps_summary.append(f"- Tool `{action.tool}` returned: {str(observation)[:300]}")
+
+    steps_text = "\n".join(steps_summary) if steps_summary else "No tool results available."
+
+    forced_prompt = (
+        f"The user asked: {question}\n\n"
+        f"You gathered the following information:\n{steps_text}\n\n"
+        "Based solely on the information above, write a clear, concise final answer "
+        "for the user. Do not call any more tools. Do not say you cannot answer. Do it in a Markdown Format."
+    )
+
+    print("DEBUG: Agent hit iteration limit — forcing final answer via direct LLM call.")
+    response = llm.invoke([HumanMessage(content=forced_prompt)])
+    return response.content
+
 # --- Main Entry Point ---
 
-def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[models.T] = None, response_model_raw: bool = True, limit: int = 10, max_iterations: int = 5):
+def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_iterations: int = 15):
     """
     Main execution function using a tool-calling agent for specialized CSV analysis.
     """
     # 1. Setup context
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
-    llm = get_agent(response_model, response_model_raw)
+    llm = get_agent()
     
     # 2. Setup Context for Tools
     tool_context = {
@@ -160,19 +218,22 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
         "preview": df.head(5).to_dict(orient="records")
     }
     
-    # 3. Initialize Tools
-    tools = create_analysis_tools(df, tool_context)
+    # 3. Initialize Tools (passing chat_store for persistence)
+    if "plots" not in chat_store:
+        chat_store["plots"] = []
+    tools = create_analysis_tools(df, tool_context, chat_store)
 
     # 4. Prepare Prompt
-    sys_prompt = os.getenv("LLM_SYS_PROMPT_agent").format(
+    all_prompts = load_prompts()
+    sys_prompt = all_prompts["agent_prompts"]["analyst_agent"].format(
         filename=tool_context["filename"],
         rows=df.shape[0],
         columns=tool_context["columns"],
         preview=tool_context["preview"]
-    ).replace("{", "{{").replace("}", "}}")
+    )
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_prompt),
+        SystemMessage(content=sys_prompt),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{user_input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -185,7 +246,9 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
         tools=tools, 
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=max_iterations
+        max_iterations=max_iterations,
+        early_stopping_method="generate",
+        return_intermediate_steps=True
     )
     
     # 6. Execute
@@ -198,6 +261,13 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
             "chat_history": trimmed_history
         })
         output = response["output"]
+        is_incomplete = (
+            not output
+            or "agent stopped" in output.lower()
+            or output.strip().startswith(("I need to", "I should", "Let me", "Now "))
+        )
+        if is_incomplete:
+            output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
     except Exception as e:
         output = f"I encountered an error while analyzing the data: {str(e)}"
     
