@@ -129,7 +129,6 @@ export class AppComponent {
     const currentChat = this.selectedChat;
     const message = this.draftMessage.trim();
     const uploadedFile = this.tempUploadedFile;
-    const previousUploadedFileName = currentChat.uploadedFileName;
     const hasCsv = !!uploadedFile;
     const hasText = !!message;
 
@@ -163,11 +162,12 @@ export class AppComponent {
 
     // API-Call machen
     if (hasCsv && uploadedFile) {
+      // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
+      currentChat.uploadedFileName = uploadedFile.name;
+
       this.chatService.uploadCsv(uploadedFile).subscribe({
         next: (uploadResponse) => {
-          // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
           currentChat.backendChatId = uploadResponse.chat_id;
-          currentChat.uploadedFileName = uploadedFile.name;
           this.tempUploadedFile = null;
 
           // 2. Sofort die eigentliche Nachricht hinterher (mit chat_id)
