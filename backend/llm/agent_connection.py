@@ -26,8 +26,10 @@ def get_agent(response_model: Type[models.T] = None, raw: bool = True) -> ChatNV
         temperature=0.1,
         top_p=1,
         max_tokens=16384,
-        reasoning_budget=2048,  # Reduced for significantly faster response times
-        model_kwargs={"enable_thinking":True},  
+        model_kwargs={
+            "enable_thinking": True,
+            "reasoning_budget": 2048 # Moved here to avoid warning
+        },  
     )
 
 # --- Tool Factory ---
@@ -41,15 +43,20 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
     @tool
     def query_dataframe(code: str) -> str:
         """
-        Executes arbitrary Python code on the pandas DataFrame 'df'.
-        Use this for complex filtering, grouping, or any logic not covered by other tools.
+        Executes a SINGLE LINE Python pandas expression on the DataFrame 'df'.
+        CRITICAL: Only single-line expressions are allowed. No assignments (no '='). 
+        No plots. Returns the string result of the expression.
         Example: "df.groupby('category')['price'].mean()"
         """
+        # Strictly enforce single line and no assignments
+        if "\n" in code or "=" in code:
+            return "Error: Only single-line expressions without assignments are allowed. Use a single pandas chain."
+
         print(f"DEBUG: Agent calling 'query_dataframe' with code: {code}")
         try:
             # We use eval for single expressions; for safety/simplicity we restrict to 'df' and 'pd'
             result = eval(code, {"df": df, "pd": pd})
-            print(f"DEBUG: 'query_dataframe' returned result: {str(result)[:100]}...")
+            print(f"DEBUG: 'query_dataframe' result: {str(result)[:100]}...")
             return str(result)
         except Exception as e:
             print(f"DEBUG: 'query_dataframe' error: {str(e)}")
@@ -85,11 +92,32 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
         return str(df[column_name].value_counts().head(10))
 
     @tool
+    def get_correlations(dummy: str = "") -> str:
+        """
+        Calculates the Pearson correlation matrix for all numerical columns in the DataFrame.
+        Use this to find relationships between variables.
+        """
+        print("DEBUG: Agent calling 'get_correlations'")
+        numeric_df = df.select_dtypes(include=['number'])
+        if numeric_df.empty:
+            return "No numerical columns found for correlation analysis."
+        return str(numeric_df.corr().round(2))
+
+    @tool
+    def get_missing_values(dummy: str = "") -> str:
+        """
+        Returns a report of missing values (NaNs) for each column in the DataFrame.
+        """
+        print("DEBUG: Agent calling 'get_missing_values'")
+        missing = df.isnull().sum()
+        return str(missing[missing > 0]) if missing.any() else "No missing values detected."
+
+    @tool
     def generate_plot(instructions: str) -> str:
         """
-        Generates a visualization (plot) based on your instructions.
-        Provide clear instructions like 'Create a histogram of age' or 'Compare salary by department'.
-        Returns the path to the saved plot image.
+        The ONLY tool for generating visualizations (plots, charts, histograms).
+        Provide clear natural language instructions. This tool will handle all the complex 
+        plotting logic and return a path to the generated SVG image.
         """
         print(f"DEBUG: Agent requested plot: {instructions}")
         try:
@@ -104,7 +132,15 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any]):
             print(f"DEBUG: generate_plot error: {str(e)}")
             return f"Error generating plot: {str(e)}"
 
-    return [query_dataframe, get_dataframe_info, get_dataframe_summary, get_unique_values, generate_plot]
+    return [
+        query_dataframe, 
+        get_dataframe_info, 
+        get_dataframe_summary, 
+        get_unique_values, 
+        get_correlations, 
+        get_missing_values, 
+        generate_plot
+    ]
 
 # --- Main Entry Point ---
 
@@ -128,7 +164,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
     tools = create_analysis_tools(df, tool_context)
 
     # 4. Prepare Prompt
-    sys_prompt = os.getenv("LLM_SYS_PROMPT").format(
+    sys_prompt = os.getenv("LLM_SYS_PROMPT_agent").format(
         filename=tool_context["filename"],
         rows=df.shape[0],
         columns=tool_context["columns"],
@@ -136,7 +172,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
     ).replace("{", "{{").replace("}", "}}")
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_prompt + "\nYou have access to tools that can query the full dataset and generate plots. Use them to provide accurate answers."),
+        ("system", sys_prompt),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{user_input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -156,7 +192,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, response_model: Type[mo
     trimmed_history = history.messages[-limit:] if len(history.messages) > limit else history.messages
     
     try:
-        print(f"DEBUG: Starting LLM execution (Thinking/Answering phase)...")
+        print("DEBUG: Starting LLM execution (Thinking/Answering phase)...")
         response = agent_executor.invoke({
             "user_input": message or "Give me a summary of the data.",
             "chat_history": trimmed_history

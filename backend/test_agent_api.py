@@ -1,16 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
-import numpy as np
-import os
 from itertools import count
-import dotenv
 
 # Import the new agent logic
 from backend.llm.agent_connection import agent_call
 from models.messages import ChatRequest
-
-dotenv.load_dotenv()
 
 app = FastAPI(title="Agent Test API")
 
