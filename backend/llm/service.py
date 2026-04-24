@@ -1,20 +1,30 @@
 import models.messages as models
-from backend.llm.llm_connection import agent_call
 from typing import Any, Dict
 
-
-
 def get_llm_response(chat_store: Dict[str, Any], message: str) -> models.ChatResponse:
-  try:
-    chat_store, bot_message = agent_call(chat_store, message, limit = 10)
-  except Exception as e:  # ToDo: More specific exception with logging
-    print(e)
-    return chat_store, models.ChatResponse(
-      bot_message="Error: Could not get response from the LLM. Maybe try again."+str(e),
-      plot_reference=[]
-    )
+    """
+    MOCK IMPLEMENTATION for Frontend PoC. 
+    Generates a dummy plot and returns immediately.
+    """
+    # 1. Generate Dummy SVG
+    dummy_svg = """
+    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="80" stroke="green" stroke-width="4" fill="yellow" />
+      <text x="50%" y="50%" text-anchor="middle" stroke="#51c5cf" stroke-width="1px" dy=".3em">TEST PLOT</text>
+    </svg>
+    """
 
-  return chat_store, models.ChatResponse(
-    bot_message=bot_message,
-    plot_reference=[]
-  )
+    # 2. Store in chat_store
+    if "plots" not in chat_store:
+        chat_store["plots"] = []
+    
+    chat_store["plots"].append(dummy_svg)
+    plot_index = len(chat_store["plots"])
+
+    # 3. Dummy bot response
+    bot_message = f"This is a dummy response. I have generated a test plot for you (Index: {plot_index})."
+
+    return chat_store, models.ChatResponse(
+        bot_message=bot_message,
+        plot_reference=[plot_index]
+    )
