@@ -4,8 +4,8 @@
       <div class="panel-header">
         <h2>Zusammenfassung</h2>
       </div>
-      <div class="panel-body placeholder-box">
-        <p>Hier wird später die Zusammenfassung angezeigt.</p>
+      <div class="panel-body summary-panel">
+        <p>{{ summaryText }}</p>
       </div>
     </section>
 
@@ -112,8 +112,34 @@
       <div class="panel-header">
         <h2>Diagramme</h2>
       </div>
-      <div class="panel-body placeholder-box">
-        <p>Hier erscheinen später Linien-, Balken- und Kreisdiagramme.</p>
+      <div class="panel-body visuals-panel">
+        <ng-container *ngIf="selectedPlots.length; else noPlots">
+          <article class="plot-card" *ngFor="let plot of selectedPlots">
+            <div class="plot-card-header">
+              <h3>{{ plot.title }}</h3>
+              <span>#{{ plot.index }}</span>
+            </div>
+
+            <img
+              *ngIf="plot.available"
+              [src]="plot.imageUrl"
+              [alt]="plot.title"
+              class="plot-image"
+              (error)="selectedChat && markPlotUnavailable(selectedChat, plot.index)"
+            />
+
+            <div *ngIf="!plot.available" class="plot-fallback">
+              <p>Der Plot-Endpunkt ist noch nicht erreichbar.</p>
+              <p>{{ plot.imageUrl }}</p>
+            </div>
+          </article>
+        </ng-container>
+
+        <ng-template #noPlots>
+          <div class="placeholder-box visuals-placeholder">
+            <p>Hier erscheinen spaeter die vom Backend gelieferten SVG-Plots.</p>
+          </div>
+        </ng-template>
       </div>
     </aside>
   </div>

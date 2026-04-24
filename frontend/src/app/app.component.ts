@@ -9,11 +9,21 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface ChatPlot {
+  index: number;
+  title: string;
+  imageUrl: string;
+  available: boolean;
+}
+
 interface ChatSession {
   id: number;
   name: string;
   uploadedFileName?: string;
   backendChatId?: string; // ID vom Backend (chat_1, chat_2, etc.)
+  overview?: string;
+  summary?: string;
+  plots: ChatPlot[];
   messages: ChatMessage[];
   createdAt: string;
 }
@@ -48,9 +58,23 @@ export class AppComponent {
     if (!this.selectedChat) {
       return 'Es wurde noch keine CSV Datei hochgeladen.';
     }
-    return this.selectedChat.uploadedFileName
-      ? `Aktuelle CSV: ${this.selectedChat.uploadedFileName}`
-      : 'Noch keine CSV für diesen Chat ausgewählt.';
+    return this.selectedChat.overview
+      ?? (this.selectedChat.uploadedFileName
+        ? `Aktuelle CSV: ${this.selectedChat.uploadedFileName}`
+        : 'Noch keine CSV für diesen Chat ausgewählt.');
+  }
+
+  get summaryText(): string {
+    if (!this.selectedChat) {
+      return 'Hier wird spaeter die Zusammenfassung fuer den ausgewaehlten Chat angezeigt.';
+    }
+
+    return this.selectedChat.summary
+      ?? 'Sobald das Backend strukturierte Daten liefert, erscheint hier die feste Zusammenfassung des Chats.';
+  }
+
+  get selectedPlots(): ChatPlot[] {
+    return this.selectedChat?.plots ?? [];
   }
 
   get canSendMessage(): boolean {
@@ -78,6 +102,9 @@ export class AppComponent {
       id: this.nextChatId++,
       name: `Chat ${this.nextChatId - 1}`,
       uploadedFileName: undefined,
+      overview: undefined,
+      summary: undefined,
+      plots: [],
       messages: [],
       createdAt: new Date().toLocaleString('de-DE', {
         year: 'numeric',
@@ -190,7 +217,11 @@ export class AppComponent {
   private callChatApi(message: string, chat: ChatSession): void {
     this.chatService.sendMessage(message, chat.backendChatId).subscribe({
       next: (response) => {
-        this.handleApiResponse(response.response.bot_message, chat);
+        this.handleApiResponse(
+          response.response.bot_message,
+          response.response.plot_reference ?? [],
+          chat
+        );
         this.isLoading = false;
       },
       error: (error) => {
@@ -200,14 +231,16 @@ export class AppComponent {
     });
   }
 
-  
-  private handleApiResponse(response: string, chat: ChatSession): void {
+  private handleApiResponse(response: string, plotIndices: number[], chat: ChatSession): void {
     chat.messages.push({
       role: 'bot',
       content: response,
       renderedContent: this.renderMarkdown(response),
       timestamp: this.timeStamp(),
     });
+
+    this.updateDerivedPanels(chat, response);
+    this.attachPlots(chat, plotIndices);
     this.scrollToBottom();
   }
 
@@ -246,5 +279,40 @@ export class AppComponent {
 
   private timeStamp(): string {
     return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private updateDerivedPanels(chat: ChatSession, botMessage: string): void {
+    const uploadedFile = chat.uploadedFileName ?? 'Keine CSV hochgeladen';
+
+    chat.overview = `Datei: ${uploadedFile}. Aktiver Chat: ${chat.name}. Backend-Chat-ID: ${chat.backendChatId ?? 'noch nicht gesetzt'}.`;
+    chat.summary = botMessage;
+  }
+
+  private attachPlots(chat: ChatSession, plotIndices: number[]): void {
+    if (!chat.backendChatId || plotIndices.length === 0) {
+      return;
+    }
+
+    const existingIndices = new Set(chat.plots.map((plot) => plot.index));
+    const newPlots = plotIndices
+      .filter((index) => !existingIndices.has(index))
+      .map((index) => ({
+        index,
+        title: `Plot ${index}`,
+        imageUrl: this.buildPlotUrl(chat.backendChatId!, index),
+        available: true,
+      }));
+
+    chat.plots = [...chat.plots, ...newPlots];
+  }
+
+  markPlotUnavailable(chat: ChatSession, plotIndex: number): void {
+    chat.plots = chat.plots.map((plot) =>
+      plot.index === plotIndex ? { ...plot, available: false } : plot
+    );
+  }
+
+  private buildPlotUrl(chatId: string, plotIndex: number): string {
+    return `http://localhost:8000/chat/${chatId}/plots/${plotIndex}`;
   }
 }

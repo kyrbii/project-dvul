@@ -69,6 +69,12 @@
   text-align: center;
 }
 
+.summary-panel {
+  min-height: 220px;
+  color: #3e4c6d;
+  line-height: 1.6;
+}
+
 .history-header {
   display: flex;
   justify-content: space-between;
@@ -306,6 +312,59 @@
   background: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+.visuals-panel {
+  gap: 14px;
+}
+
+.visuals-placeholder {
+  min-height: 180px;
+}
+
+.plot-card {
+  border: 1px solid rgba(145, 158, 171, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, #fbfcff 0%, #f3f7ff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plot-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.plot-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.plot-card-header span {
+  color: #5f6c87;
+  font-size: 0.9rem;
+}
+
+.plot-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid rgba(145, 158, 171, 0.2);
+}
+
+.plot-fallback {
+  border-radius: 12px;
+  border: 1px dashed rgba(145, 158, 171, 0.32);
+  background: #ffffff;
+  padding: 14px;
+  color: #5f6c87;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .upload-label.disabled input[type='file'] {
