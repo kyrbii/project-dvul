@@ -1,13 +1,15 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
 from models.messages import PlotCodeOutput
+from models.messages import PlotCodeOutput
 import os
 import yaml
 from typing import Dict, Any
 
-class PlotCodeOutput(BaseModel):
-    title: str = Field(description="A short title for the plot")
-    code: str = Field(description="Self-contained Python code using 'df' and 'plt' to create an SVG plot. Do NOT use plt.show().")
+def load_prompts():
+    path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
 def get_plot_code(instructions: str, context: Dict[str, Any]) -> PlotCodeOutput:
     """
