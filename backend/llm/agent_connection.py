@@ -8,7 +8,6 @@ import langchain
 import os
 import pandas as pd
 from typing import Dict, Any
-import models.messages as models
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
 
