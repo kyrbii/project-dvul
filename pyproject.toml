@@ -13,6 +13,7 @@ dependencies = [
     "python-multipart>=0.0.26",
     "langchain-community>=0.4.1",
     "matplotlib>=3.10.9",
+    "seaborn>=0.13.2",
 ]
 
 [tool.ruff]

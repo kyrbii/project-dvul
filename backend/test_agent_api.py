@@ -5,6 +5,9 @@ from itertools import count
 # Import the new agent logic
 from backend.llm.agent_connection import agent_call
 from models.messages import ChatRequest
+import dotenv
+
+dotenv.load_dotenv()
 
 app = FastAPI(title="Agent Test API")
 
