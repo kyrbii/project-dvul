@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, Component, ViewChild, ElementRef } from '@angular/core';
 import { ChatService } from './chat.service';
 import { marked } from 'marked';
 
@@ -44,7 +44,10 @@ export class AppComponent {
 
   @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
 
-  constructor(private chatService: ChatService) {
+  constructor(
+    private chatService: ChatService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {
     marked.setOptions({
       gfm: true,
       breaks: true,
@@ -241,6 +244,7 @@ export class AppComponent {
 
     this.updateDerivedPanels(chat, response);
     this.attachPlots(chat, plotIndices);
+    this.refreshView();
     this.scrollToBottom();
   }
 
@@ -252,6 +256,7 @@ export class AppComponent {
       renderedContent: this.escapeHtml(`❌ ${errorMessage}`),
       timestamp: this.timeStamp(),
     });
+    this.refreshView();
     this.scrollToBottom();
   }
 
@@ -275,6 +280,10 @@ export class AppComponent {
         this.chatWindow.nativeElement.scrollTop = this.chatWindow.nativeElement.scrollHeight;
       }, 0);
     }
+  }
+
+  private refreshView(): void {
+    this.changeDetectorRef.detectChanges();
   }
 
   private timeStamp(): string {
