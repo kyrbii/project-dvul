@@ -1,9 +1,11 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
 import { ChatService } from './chat.service';
+import { marked } from 'marked';
 
 interface ChatMessage {
   role: 'user' | 'bot';
   content: string;
+  renderedContent?: string;
   timestamp: string;
 }
 
@@ -18,6 +20,7 @@ interface ChatSession {
 
 @Component({
   selector: 'app-root',
+  standalone: false,
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
@@ -32,6 +35,11 @@ export class AppComponent {
   @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
 
   constructor(private chatService: ChatService) {
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+    });
+
     // Automatisch ersten Chat erstellen
     this.createNewChat();
   }
@@ -144,6 +152,7 @@ export class AppComponent {
     currentChat.messages.push({
       role: 'user',
       content: userContent,
+      renderedContent: this.escapeHtml(userContent),
       timestamp: this.timeStamp(),
     });
 
@@ -191,10 +200,12 @@ export class AppComponent {
     });
   }
 
+  
   private handleApiResponse(response: string, chat: ChatSession): void {
     chat.messages.push({
       role: 'bot',
       content: response,
+      renderedContent: this.renderMarkdown(response),
       timestamp: this.timeStamp(),
     });
     this.scrollToBottom();
@@ -205,9 +216,24 @@ export class AppComponent {
     chat.messages.push({
       role: 'bot',
       content: `❌ ${errorMessage}`,
+      renderedContent: this.escapeHtml(`❌ ${errorMessage}`),
       timestamp: this.timeStamp(),
     });
     this.scrollToBottom();
+  }
+
+  private renderMarkdown(content: string): string {
+    return marked.parse(content) as string;
+  }
+
+  private escapeHtml(content: string): string {
+    return content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\n/g, '<br />');
   }
 
   private scrollToBottom(): void {
