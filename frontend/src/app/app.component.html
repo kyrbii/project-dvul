@@ -59,7 +59,7 @@
           <ng-container *ngIf="selectedChat && selectedChat.messages.length; else emptyChat">
             <div class="message-row" *ngFor="let message of selectedChat.messages">
               <div [class.user]="message.role === 'user'" [class.bot]="message.role === 'bot'" class="message-bubble">
-                <div class="message-content">{{ message.content }}</div>
+                <div class="message-content" [innerHTML]="message.renderedContent || message.content"></div>
                 <div class="message-time">{{ message.timestamp }}</div>
               </div>
             </div>
