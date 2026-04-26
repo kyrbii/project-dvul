@@ -264,7 +264,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
         is_incomplete = (
             not output
             or "agent stopped" in output.lower()
-            or output.strip().startswith(("I need to", "I should", "Let me"))
+            or output.strip().startswith(("I need to", "I should", "Let me", "Now "))
         )
         if is_incomplete:
             output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
