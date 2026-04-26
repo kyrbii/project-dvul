@@ -9,15 +9,13 @@ services:
     ports:
       - "8000:8000"
 
+  
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    command: uv run streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
-    volumes:
-      - .:/app
     ports:
-      - "8501:8501"
+      - "4200:4200"
     environment:
       - API_URL=http://backend:8000
     depends_on:
