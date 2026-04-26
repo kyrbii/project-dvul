@@ -33,6 +33,7 @@ interface ChatSession {
   standalone: false,
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
+  standalone: false //hinzugefügt für docker
 })
 export class AppComponent {
   draftMessage = '';
