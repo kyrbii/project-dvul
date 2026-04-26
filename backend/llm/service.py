@@ -17,8 +17,13 @@ def get_llm_response(chat_store: Dict[str, Any], message: str) -> models.ChatRes
     # 2. Store in chat_store
     if "plots" not in chat_store:
         chat_store["plots"] = []
-    
-    chat_store["plots"].append(dummy_svg)
+
+    plot_entry = {
+                "title": "This is a dummy plot title.",
+                "svg": dummy_svg
+            }
+
+    chat_store["plots"].append(plot_entry)
     plot_index = len(chat_store["plots"])
 
     # 3. Dummy bot response
