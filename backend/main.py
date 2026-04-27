@@ -73,7 +73,7 @@ async def upload_csv(file: UploadFile = File(...)):
 
     summary = create_dataset_summary(df)
 
-    chat_store[chat_id] = {
+    chat_store[chat_id] = {             # @Korbi du musst dann in der get_llm_repsonse auch die summary miteinbeziehen fürs LLM
         "filename": file.filename,
         "dataframe": df,
         "summary": summary,
