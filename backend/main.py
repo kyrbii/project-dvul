@@ -64,7 +64,7 @@ async def upload_csv(file: UploadFile = File(...)):
         }
 
 
-@app.get("/plots/{chat_id}/{plot_index}")
+@app.get("/plots/{chat_id}/{plot_index}")               # für einen einzelnen Plot
 def get_plots(chat_id: str, plot_index: int):
     if chat_id not in chat_store:
         raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
@@ -78,4 +78,14 @@ def get_plots(chat_id: str, plot_index: int):
         "chat_id": chat_id,
         "plot_index": plot_index,
         "plot": plots[plot_index - 1]
+    }
+
+@app.get("/plots/{chat_id}")                            # für alle Plots pro Chat-ID
+def get_plots(chat_id: str):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+
+    return {
+        "chat_id": chat_id,
+        "plots": chat_store[chat_id].get("plots", [])
     }
