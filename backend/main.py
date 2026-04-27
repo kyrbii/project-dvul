@@ -74,4 +74,8 @@ def get_plots(chat_id: str, plot_index: int):
     if plot_index < 1 or plot_index > len(plots):
         raise HTTPException(status_code=404, detail="Plot nicht gefunden.")
     
-    return plots[plot_index-1]
+    return {
+        "chat_id": chat_id,
+        "plot_index": plot_index,
+        "plot": plots[plot_index - 1]
+    }
