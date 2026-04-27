@@ -62,3 +62,16 @@ async def upload_csv(file: UploadFile = File(...)):
     return {
         "chat_id": chat_id
         }
+
+
+@app.get("/plots/{chat_id}/{plot_index}")
+def get_plots(chat_id: str, plot_index: int):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+    
+    plots = chat_store[chat_id].get("plots", [])
+
+    if plot_index < 1 or plot_index > len(plots):
+        raise HTTPException(status_code=404, detail="Plot nicht gefunden.")
+    
+    return plots[plot_index-1]
