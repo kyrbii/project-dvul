@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
 import numpy as np
@@ -74,11 +74,9 @@ def get_plots(chat_id: str, plot_index: int):
     if plot_index < 1 or plot_index > len(plots):
         raise HTTPException(status_code=404, detail="Plot nicht gefunden.")
     
-    return {
-        "chat_id": chat_id,
-        "plot_index": plot_index,
-        "plot": plots[plot_index - 1]
-    }
+    svg = plots[plot_index - 1]["svg"]
+    
+    return Response(content=svg, media_type="image/svg+xml")
 
 @app.get("/plots/{chat_id}")                            # für alle Plots pro Chat-ID
 def get_plots(chat_id: str):
