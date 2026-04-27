@@ -22,6 +22,26 @@ app.add_middleware(
 chat_counter = count(1)
 chat_store = {}
 
+def create_dataset_summary(df: pd.DataFrame):
+    clean_preview = (
+        preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None).to_dict(orient="records")
+    )
+
+    clean_describe = (
+        df.describe(include="all").replace([np.nan, np.inf, -np.inf], None).to_dict()
+    )
+
+    return {
+        "rows": len(df),
+        "column_count": len(df.columns),
+        "columns": df.columns.tolist(),
+        "dtypes": df.dtypes.astype(str).to_dict(),
+        "missing_values": df.isnull().sum().astype(int).to_dict(),
+        "describe": clean_describe,
+        "preview": clean_preview,
+    }
+
+
 @app.post("/chat")
 def chat(request: ChatRequest):
 
@@ -51,16 +71,23 @@ async def upload_csv(file: UploadFile = File(...)):
     
     chat_id = f"chat_{next(chat_counter)}"
 
+    summary = create_dataset_summary(df)
+
     chat_store[chat_id] = {
         "filename": file.filename,
-        "dataframe": df
-    }
+        "dataframe": df,
+        "summary": summary,
+        "messages": [],
+        "plots": []
+}
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
     
     # Let the model analyze the file
     return {
-        "chat_id": chat_id
+        "chat_id": chat_id,
+        "filename": file.filename,
+        "summary": summary
         }
 
 
