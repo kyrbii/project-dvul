@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, ViewChild, ElementRef } from '@angular/core';
-import { ChatService } from './chat.service';
+import { BackendPlot, ChatService, ChatResponse } from './chat.service';
 import { marked } from 'marked';
 
 interface ChatMessage {
@@ -220,12 +220,7 @@ export class AppComponent {
   private callChatApi(message: string, chat: ChatSession): void {
     this.chatService.sendMessage(message, chat.backendChatId).subscribe({
       next: (response) => {
-        this.handleApiResponse(
-          response.response.bot_message,
-          response.response.plot_reference ?? [],
-          chat
-        );
-        this.isLoading = false;
+        this.handleApiResponse(response, chat);
       },
       error: (error) => {
         this.handleApiError(error, chat);
@@ -234,7 +229,10 @@ export class AppComponent {
     });
   }
 
-  private handleApiResponse(response: string, plotIndices: number[], chat: ChatSession): void {
+  private handleApiResponse(apiResponse: ChatResponse, chat: ChatSession): void {
+    const response = this.extractBotMessage(apiResponse);
+    const plotIndices = apiResponse.response.plot_reference ?? [];
+
     chat.messages.push({
       role: 'bot',
       content: response,
@@ -243,9 +241,7 @@ export class AppComponent {
     });
 
     this.updateDerivedPanels(chat, response);
-    this.attachPlots(chat, plotIndices);
-    this.refreshView();
-    this.scrollToBottom();
+    this.syncPlots(chat, plotIndices);
   }
 
   private handleApiError(error: any, chat: ChatSession): void {
@@ -297,22 +293,65 @@ export class AppComponent {
     chat.summary = botMessage;
   }
 
-  private attachPlots(chat: ChatSession, plotIndices: number[]): void {
+  private syncPlots(chat: ChatSession, fallbackIndices: number[]): void {
+    if (!chat.backendChatId) {
+      this.finalizeResponse();
+      return;
+    }
+
+    this.chatService.getPlots(chat.backendChatId).subscribe({
+      next: ({ plots }) => {
+        chat.plots = this.mapBackendPlots(chat.backendChatId!, plots, fallbackIndices);
+        this.finalizeResponse();
+      },
+      error: () => {
+        this.attachPlotsByIndices(chat, fallbackIndices);
+        this.finalizeResponse();
+      }
+    });
+  }
+
+  private mapBackendPlots(chatId: string, plots: BackendPlot[], fallbackIndices: number[]): ChatPlot[] {
+    if (!plots.length) {
+      return this.buildFallbackPlots(chatId, fallbackIndices);
+    }
+
+    return plots.map((plot, index) => ({
+      index: index + 1,
+      title: plot.title?.trim() || `Plot ${index + 1}`,
+      imageUrl: this.buildPlotUrl(chatId, index + 1),
+      available: true,
+    }));
+  }
+
+  private attachPlotsByIndices(chat: ChatSession, plotIndices: number[]): void {
     if (!chat.backendChatId || plotIndices.length === 0) {
       return;
     }
 
-    const existingIndices = new Set(chat.plots.map((plot) => plot.index));
-    const newPlots = plotIndices
-      .filter((index) => !existingIndices.has(index))
-      .map((index) => ({
-        index,
-        title: `Plot ${index}`,
-        imageUrl: this.buildPlotUrl(chat.backendChatId!, index),
-        available: true,
-      }));
+    chat.plots = this.buildFallbackPlots(chat.backendChatId, plotIndices);
+  }
 
-    chat.plots = [...chat.plots, ...newPlots];
+  private buildFallbackPlots(chatId: string, plotIndices: number[]): ChatPlot[] {
+    return plotIndices.map((index) => ({
+      index,
+      title: `Plot ${index}`,
+      imageUrl: this.buildPlotUrl(chatId, index),
+      available: true,
+    }));
+  }
+
+  private extractBotMessage(apiResponse: ChatResponse): string {
+    return apiResponse.response.bot_message
+      ?? apiResponse.response.summary
+      ?? apiResponse.response.message
+      ?? 'Das Backend hat keine Antwort geliefert.';
+  }
+
+  private finalizeResponse(): void {
+    this.isLoading = false;
+    this.refreshView();
+    this.scrollToBottom();
   }
 
   markPlotUnavailable(chat: ChatSession, plotIndex: number): void {
@@ -322,6 +361,6 @@ export class AppComponent {
   }
 
   private buildPlotUrl(chatId: string, plotIndex: number): string {
-    return `http://localhost:8000/chat/${chatId}/plots/${plotIndex}`;
+    return `http://localhost:8000/plots/${chatId}/${plotIndex}`;
   }
 }
