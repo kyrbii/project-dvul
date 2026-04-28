@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
 import numpy as np
@@ -62,3 +62,28 @@ async def upload_csv(file: UploadFile = File(...)):
     return {
         "chat_id": chat_id
         }
+
+
+@app.get("/plots/{chat_id}/{plot_index}")               # für einen einzelnen Plot
+def get_plots(chat_id: str, plot_index: int):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+    
+    plots = chat_store[chat_id].get("plots", [])
+
+    if plot_index < 1 or plot_index > len(plots):
+        raise HTTPException(status_code=404, detail="Plot nicht gefunden.")
+    
+    svg = plots[plot_index - 1]["svg"]
+    
+    return Response(content=svg, media_type="image/svg+xml")
+
+@app.get("/plots/{chat_id}")                            # für alle Plots pro Chat-ID
+def get_plots(chat_id: str):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+
+    return {
+        "chat_id": chat_id,
+        "plots": chat_store[chat_id].get("plots", [])
+    }

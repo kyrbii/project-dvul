@@ -1,13 +1,23 @@
 .page-shell {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 20px;
+  overflow: hidden;
 }
 
 .layout-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 320px;
-  grid-template-rows: minmax(240px, auto) minmax(320px, 1fr);
+  grid-template-columns: minmax(220px, 0.95fr) minmax(320px, 1.4fr) minmax(220px, 0.95fr);
+  grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 20px;
+  width: 100%;
+  min-height: calc(100vh - 40px);
+  min-height: calc(100dvh - 40px);
+  height: calc(100vh - 40px);
+  height: calc(100dvh - 40px);
+  align-items: stretch;
 }
 
 .panel {
@@ -18,6 +28,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .left-top {
@@ -35,11 +46,13 @@
   grid-row: 1 / span 2;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .right-panel {
   grid-column: 3;
   grid-row: 1 / span 2;
+  min-height: 0;
 }
 
 .panel-header {
@@ -58,15 +71,23 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
 }
 
 .placeholder-box {
-  min-height: 220px;
+  min-height: 0;
   justify-content: center;
   align-items: center;
   border: 1px dashed rgba(145, 158, 171, 0.32);
   color: #5f6c87;
   text-align: center;
+}
+
+.summary-panel {
+  flex: 1;
+  color: #3e4c6d;
+  line-height: 1.6;
+  overflow-y: auto;
 }
 
 .history-header {
@@ -94,6 +115,9 @@
 .history-list {
   display: grid;
   gap: 10px;
+  align-content: start;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .history-item {
@@ -140,7 +164,7 @@
 
 .overview-body {
   padding: 0 24px 24px;
-  min-height: 110px;
+  min-height: 0;
   display: flex;
   align-items: center;
   color: #3e4c6d;
@@ -152,6 +176,7 @@
   display: flex;
   flex-direction: column;
   padding: 24px;
+  min-height: 0;
 }
 
 .chat-title-row {
@@ -173,8 +198,7 @@
 
 .chat-window {
   flex: 1;
-  min-height: 360px;
-  max-height: 360px;
+  min-height: 0;
   background: #f8f9ff;
   border-radius: 20px;
   border: 1px solid rgba(145, 158, 171, 0.16);
@@ -196,11 +220,13 @@
 }
 
 .message-bubble {
-  max-width: 80%;
+  max-width: 100%;
   padding: 14px 16px;
   border-radius: 18px;
   position: relative;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .message-content {
@@ -306,6 +332,63 @@
   background: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+.visuals-panel {
+  gap: 14px;
+  flex: 1;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+}
+
+.visuals-placeholder {
+  flex: 1;
+}
+
+.plot-card {
+  border: 1px solid rgba(145, 158, 171, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, #fbfcff 0%, #f3f7ff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plot-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.plot-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.plot-card-header span {
+  color: #5f6c87;
+  font-size: 0.9rem;
+}
+
+.plot-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid rgba(145, 158, 171, 0.2);
+}
+
+.plot-fallback {
+  border-radius: 12px;
+  border: 1px dashed rgba(145, 158, 171, 0.32);
+  background: #ffffff;
+  padding: 14px;
+  color: #5f6c87;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .upload-label.disabled input[type='file'] {
@@ -428,20 +511,60 @@
 }
 
 .right-panel .panel-body {
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
 }
 
 @media (max-width: 1200px) {
   .layout-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
+    grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(180px, 0.9fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-shell {
+    padding: 12px;
   }
 
-  .left-top,
-  .left-bottom,
-  .center-panel,
-  .right-panel {
-    grid-column: 1;
+  .layout-grid {
+    grid-template-columns: minmax(150px, 0.85fr) minmax(220px, 1.1fr) minmax(150px, 0.85fr);
+    gap: 12px;
+  }
+
+  .panel-header,
+  .panel-body,
+  .overview-header,
+  .overview-body,
+  .chat-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .panel-header,
+  .panel-body,
+  .overview-header {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .overview-body {
+    padding-bottom: 16px;
+  }
+
+  .chat-section {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .message-input,
+  .send-button {
+    min-width: 0;
+  }
+
+  .history-item,
+  .plot-card,
+  .message-bubble {
+    padding: 12px;
   }
 }

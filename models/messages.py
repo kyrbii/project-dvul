@@ -51,3 +51,7 @@ class AnalysisResponse(BaseModel):
         description="A list of up to 3 independent plotting actions.",
         max_length=3
     )
+
+class PlotCodeOutput(BaseModel):
+    title: str = Field(description="A short title for the plot")
+    code: str = Field(description="Self-contained Python code using 'df' and 'plt' to create an SVG plot. Do NOT use plt.show().")

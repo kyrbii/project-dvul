@@ -12,6 +12,10 @@ dependencies = [
     "dotenv>=0.9.9",
     "python-multipart>=0.0.26",
     "langchain-community>=0.4.1",
+    "matplotlib>=3.10.9",
+    "seaborn>=0.13.2",
+    "numpy>=2.4.1",
+    "pandas>=2.4.0",
 ]
 
 [tool.ruff]

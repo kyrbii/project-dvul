@@ -6,13 +6,25 @@ import { catchError } from 'rxjs/operators';
 export interface ChatResponse {
   chat_id: string;
   response: {
-    bot_message: string;
-    plot_reference: number[];
+    bot_message?: string;
+    plot_reference?: number[];
+    summary?: string;
+    message?: string;
   };
 }
 
 export interface UploadResponse {
   chat_id: string;
+}
+
+export interface BackendPlot {
+  title?: string;
+  svg?: string;
+}
+
+export interface ChatPlotsResponse {
+  chat_id: string;
+  plots: BackendPlot[];
 }
 
 @Injectable({
@@ -36,11 +48,18 @@ export class ChatService {
 
   // Chat-Nachricht senden (nach CSV-Upload)
   sendMessage(message: string, chatId?: string): Observable<ChatResponse> {
-    const payload = { 
+    const payload = {
       message,
-      chat_id: chatId 
+      chat_id: chatId
     };
     return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getPlots(chatId: string): Observable<ChatPlotsResponse> {
+    return this.http.get<ChatPlotsResponse>(`${this.apiUrl}/plots/${chatId}`)
       .pipe(
         catchError(this.handleError)
       );

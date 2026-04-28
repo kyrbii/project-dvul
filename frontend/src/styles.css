@@ -12,8 +12,15 @@
 html,
 body {
   margin: 0;
+  height: 100%;
   min-height: 100%;
   background: #f3f6fc;
+  overflow: hidden;
+}
+
+app-root {
+  display: block;
+  min-height: 100%;
 }
 
 button {

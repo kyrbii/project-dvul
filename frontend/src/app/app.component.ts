@@ -1,5 +1,5 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
-import { ChatService } from './chat.service';
+import { ChangeDetectorRef, Component, ViewChild, ElementRef } from '@angular/core';
+import { BackendPlot, ChatService, ChatResponse } from './chat.service';
 import { marked } from 'marked';
 
 interface ChatMessage {
@@ -9,11 +9,21 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface ChatPlot {
+  index: number;
+  title: string;
+  imageUrl: string;
+  available: boolean;
+}
+
 interface ChatSession {
   id: number;
   name: string;
   uploadedFileName?: string;
   backendChatId?: string; // ID vom Backend (chat_1, chat_2, etc.)
+  overview?: string;
+  summary?: string;
+  plots: ChatPlot[];
   messages: ChatMessage[];
   createdAt: string;
 }
@@ -34,7 +44,10 @@ export class AppComponent {
 
   @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
 
-  constructor(private chatService: ChatService) {
+  constructor(
+    private chatService: ChatService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {
     marked.setOptions({
       gfm: true,
       breaks: true,
@@ -48,9 +61,23 @@ export class AppComponent {
     if (!this.selectedChat) {
       return 'Es wurde noch keine CSV Datei hochgeladen.';
     }
-    return this.selectedChat.uploadedFileName
-      ? `Aktuelle CSV: ${this.selectedChat.uploadedFileName}`
-      : 'Noch keine CSV für diesen Chat ausgewählt.';
+    return this.selectedChat.overview
+      ?? (this.selectedChat.uploadedFileName
+        ? `Aktuelle CSV: ${this.selectedChat.uploadedFileName}`
+        : 'Noch keine CSV für diesen Chat ausgewählt.');
+  }
+
+  get summaryText(): string {
+    if (!this.selectedChat) {
+      return 'Hier wird spaeter die Zusammenfassung fuer den ausgewaehlten Chat angezeigt.';
+    }
+
+    return this.selectedChat.summary
+      ?? 'Sobald das Backend strukturierte Daten liefert, erscheint hier die feste Zusammenfassung des Chats.';
+  }
+
+  get selectedPlots(): ChatPlot[] {
+    return this.selectedChat?.plots ?? [];
   }
 
   get canSendMessage(): boolean {
@@ -78,6 +105,9 @@ export class AppComponent {
       id: this.nextChatId++,
       name: `Chat ${this.nextChatId - 1}`,
       uploadedFileName: undefined,
+      overview: undefined,
+      summary: undefined,
+      plots: [],
       messages: [],
       createdAt: new Date().toLocaleString('de-DE', {
         year: 'numeric',
@@ -129,7 +159,6 @@ export class AppComponent {
     const currentChat = this.selectedChat;
     const message = this.draftMessage.trim();
     const uploadedFile = this.tempUploadedFile;
-    const previousUploadedFileName = currentChat.uploadedFileName;
     const hasCsv = !!uploadedFile;
     const hasText = !!message;
 
@@ -163,11 +192,12 @@ export class AppComponent {
 
     // API-Call machen
     if (hasCsv && uploadedFile) {
+      // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
+      currentChat.uploadedFileName = uploadedFile.name;
+
       this.chatService.uploadCsv(uploadedFile).subscribe({
         next: (uploadResponse) => {
-          // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
           currentChat.backendChatId = uploadResponse.chat_id;
-          currentChat.uploadedFileName = uploadedFile.name;
           this.tempUploadedFile = null;
 
           // 2. Sofort die eigentliche Nachricht hinterher (mit chat_id)
@@ -190,8 +220,7 @@ export class AppComponent {
   private callChatApi(message: string, chat: ChatSession): void {
     this.chatService.sendMessage(message, chat.backendChatId).subscribe({
       next: (response) => {
-        this.handleApiResponse(response.response.bot_message, chat);
-        this.isLoading = false;
+        this.handleApiResponse(response, chat);
       },
       error: (error) => {
         this.handleApiError(error, chat);
@@ -200,15 +229,19 @@ export class AppComponent {
     });
   }
 
-  
-  private handleApiResponse(response: string, chat: ChatSession): void {
+  private handleApiResponse(apiResponse: ChatResponse, chat: ChatSession): void {
+    const response = this.extractBotMessage(apiResponse);
+    const plotIndices = apiResponse.response.plot_reference ?? [];
+
     chat.messages.push({
       role: 'bot',
       content: response,
       renderedContent: this.renderMarkdown(response),
       timestamp: this.timeStamp(),
     });
-    this.scrollToBottom();
+
+    this.updateDerivedPanels(chat, response);
+    this.syncPlots(chat, plotIndices);
   }
 
   private handleApiError(error: any, chat: ChatSession): void {
@@ -219,6 +252,7 @@ export class AppComponent {
       renderedContent: this.escapeHtml(`❌ ${errorMessage}`),
       timestamp: this.timeStamp(),
     });
+    this.refreshView();
     this.scrollToBottom();
   }
 
@@ -244,7 +278,89 @@ export class AppComponent {
     }
   }
 
+  private refreshView(): void {
+    this.changeDetectorRef.detectChanges();
+  }
+
   private timeStamp(): string {
     return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private updateDerivedPanels(chat: ChatSession, botMessage: string): void {
+    const uploadedFile = chat.uploadedFileName ?? 'Keine CSV hochgeladen';
+
+    chat.overview = `Datei: ${uploadedFile}. Aktiver Chat: ${chat.name}. Backend-Chat-ID: ${chat.backendChatId ?? 'noch nicht gesetzt'}.`;
+    chat.summary = botMessage;
+  }
+
+  private syncPlots(chat: ChatSession, fallbackIndices: number[]): void {
+    if (!chat.backendChatId) {
+      this.finalizeResponse();
+      return;
+    }
+
+    this.chatService.getPlots(chat.backendChatId).subscribe({
+      next: ({ plots }) => {
+        chat.plots = this.mapBackendPlots(chat.backendChatId!, plots, fallbackIndices);
+        this.finalizeResponse();
+      },
+      error: () => {
+        this.attachPlotsByIndices(chat, fallbackIndices);
+        this.finalizeResponse();
+      }
+    });
+  }
+
+  private mapBackendPlots(chatId: string, plots: BackendPlot[], fallbackIndices: number[]): ChatPlot[] {
+    if (!plots.length) {
+      return this.buildFallbackPlots(chatId, fallbackIndices);
+    }
+
+    return plots.map((plot, index) => ({
+      index: index + 1,
+      title: plot.title?.trim() || `Plot ${index + 1}`,
+      imageUrl: this.buildPlotUrl(chatId, index + 1),
+      available: true,
+    }));
+  }
+
+  private attachPlotsByIndices(chat: ChatSession, plotIndices: number[]): void {
+    if (!chat.backendChatId || plotIndices.length === 0) {
+      return;
+    }
+
+    chat.plots = this.buildFallbackPlots(chat.backendChatId, plotIndices);
+  }
+
+  private buildFallbackPlots(chatId: string, plotIndices: number[]): ChatPlot[] {
+    return plotIndices.map((index) => ({
+      index,
+      title: `Plot ${index}`,
+      imageUrl: this.buildPlotUrl(chatId, index),
+      available: true,
+    }));
+  }
+
+  private extractBotMessage(apiResponse: ChatResponse): string {
+    return apiResponse.response.bot_message
+      ?? apiResponse.response.summary
+      ?? apiResponse.response.message
+      ?? 'Das Backend hat keine Antwort geliefert.';
+  }
+
+  private finalizeResponse(): void {
+    this.isLoading = false;
+    this.refreshView();
+    this.scrollToBottom();
+  }
+
+  markPlotUnavailable(chat: ChatSession, plotIndex: number): void {
+    chat.plots = chat.plots.map((plot) =>
+      plot.index === plotIndex ? { ...plot, available: false } : plot
+    );
+  }
+
+  private buildPlotUrl(chatId: string, plotIndex: number): string {
+    return `http://localhost:8000/plots/${chatId}/${plotIndex}`;
   }
 }
