@@ -6,6 +6,7 @@ import pandas as pd
 from backend.llm.service import get_llm_response
 from models.messages import ChatRequest
 import dotenv
+import csv
 
 dotenv.load_dotenv()
 
@@ -21,6 +22,37 @@ app.add_middleware(
 )
 chat_counter = count(1)
 chat_store = {}
+
+def detect_delimiter(file):
+    sample = file.read(1024).decode("utf-8")
+    file.seek(0)
+    dialect = csv.Sniffer().sniff(sample)
+    return dialect.delimiter
+
+def has_header(file):
+    sample = file.read(1024).decode("utf-8")
+    file.seek(0)
+    return csv.Sniffer().has_header(sample)
+
+def create_dataset_summary(df: pd.DataFrame):
+    clean_preview = (
+        df.head(5).replace([np.nan, np.inf, -np.inf], None).to_dict(orient="records")
+    )
+
+    clean_describe = (
+        df.describe(include="all").replace([np.nan, np.inf, -np.inf], None).to_dict()
+    )
+
+    return {
+        "rows": len(df),
+        "column_count": len(df.columns),
+        "columns": df.columns.tolist(),
+        "dtypes": df.dtypes.astype(str).to_dict(),
+        "missing_values": df.isnull().sum().astype(int).to_dict(),
+        "describe": clean_describe,
+        "preview": clean_preview,
+    }
+
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -45,22 +77,39 @@ async def upload_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Nur CSV-Dateien sind erlaubt!")
     
     try:
-        df = pd.read_csv(file.file)
+        # delimiter erkennen
+        delimiter = detect_delimiter(file.file)
+
+        # header erkennen 
+        header_exists = has_header(file.file)
+        
+        if header_exists:
+            df = pd.read_csv(file.file, delimiter=delimiter)
+        else:
+            df = pd.read_csv(file.file, delimiter=delimiter, header=None)
+
     except Exception:
         raise HTTPException(status_code=400, detail="CSV-Datei konnte nicht gelesen werden.")
     
     chat_id = f"chat_{next(chat_counter)}"
 
-    chat_store[chat_id] = {
+    summary = create_dataset_summary(df)
+
+    chat_store[chat_id] = {             # @Korbi du musst dann in der get_llm_repsonse auch die summary miteinbeziehen fürs LLM
         "filename": file.filename,
-        "dataframe": df
-    }
+        "dataframe": df,
+        "summary": summary,
+        "messages": [],
+        "plots": []
+}
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
     
     # Let the model analyze the file
     return {
-        "chat_id": chat_id
+        "chat_id": chat_id,
+        "filename": file.filename,
+        "summary": summary
         }
 
 
