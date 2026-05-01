@@ -5,7 +5,7 @@
         <h2>Zusammenfassung</h2>
       </div>
       <div class="panel-body summary-panel">
-        <p>{{ summaryText }}</p>
+        <div class="summary-content" [innerHTML]="renderedSummaryText"></div>
       </div>
     </section>
 
@@ -13,7 +13,7 @@
       <div class="panel-header history-header">
         <div>
           <h2>Chats</h2>
-          <p class="hint">Neue Chat-Sessions mit eigener CSV erstellen</p>
+          <p class="hint">Neue Chat-Sessions erstellen</p>
         </div>
         <button class="primary-button" (click)="createNewChat()">+ Neuer Chat</button>
       </div>
@@ -68,7 +68,7 @@
           <ng-template #emptyChat>
             <div class="empty-chat-placeholder">
               <p>Es wurde noch keine CSV Datei hochgeladen.</p>
-              <p>Erstelle einen Chat und lade eine CSV hoch, um loszulegen.</p>
+              <p>Lade eine CSV hoch, um loszulegen.</p>
             </div>
           </ng-template>
         </div>
@@ -137,7 +137,7 @@
 
         <ng-template #noPlots>
           <div class="placeholder-box visuals-placeholder">
-            <p>Hier erscheinen spaeter die vom Backend gelieferten SVG-Plots.</p>
+            <p>Hier erscheinen später deine Plots.</p>
           </div>
         </ng-template>
       </div>
