@@ -193,6 +193,7 @@ def _force_final_answer(llm: ChatNVIDIA, question: str, intermediate_steps: list
         f"The user asked: {question}\n\n"
         f"You gathered the following information:\n{steps_text}\n\n"
         "Based solely on the information above, write a clear, concise final answer "
+        "It should not include code, but directly address the user's question using the insights from the tools. This answer will be presented"
         "for the user. Do not call any more tools. Do not say you cannot answer. Do it in a Markdown Format."
     )
 
