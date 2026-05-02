@@ -3,7 +3,7 @@ name: Docker Build
 #you can add your branch name here if you want to trigger the workflow on push to that branch
 on:
   push:
-    branches: [main, docker-file]
+    branches: [main]
 
 jobs:
   build:
@@ -27,7 +27,7 @@ jobs:
         with:
           context: .
           file: Dockerfile.backend
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/kyrbii/project-dvul-backend:latest
 
       - name: Build and push frontend
@@ -35,5 +35,5 @@ jobs:
         with:
           context: .
           file: Dockerfile.frontend
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/kyrbii/project-dvul-frontend:latest
