@@ -168,6 +168,54 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             print(f"DEBUG: generate_plot error: {str(e)}")
             return f"Error generating plot: {str(e)}"
 
+    @tool
+    def generate_description(dummy: str = "") -> str:
+        """
+        Generates a human-like overview description of the dataset using AI.
+        Creates a natural language summary that describes what the data represents.
+        """
+        print("DEBUG: Agent calling 'generate_description'")
+        
+        # Gather key metadata
+        filename = context.get('filename', 'Unknown')
+        num_rows = df.shape[0]
+        num_cols = df.shape[1]
+        columns_list = list(df.columns)
+        dtypes = df.dtypes.to_dict()
+        missing_count = df.isnull().sum().sum()
+        sample_data = df.head(3).to_string()
+        
+        # Use LLM to generate human-like description
+        llm = get_agent()
+        prompt = f"""
+        Write a concise, human-like overview description of this dataset. Make it sound natural and informative, like a data analyst describing the dataset to a colleague.
+
+        Dataset Details:
+        - Filename: {filename}
+        - Size: {num_rows:,} rows, {num_cols} columns
+        - Columns: {', '.join(columns_list)}
+        - Data types: {', '.join([f'{col}: {dtype}' for col, dtype in dtypes.items()])}
+        - Missing values: {missing_count:,} total
+        - Sample data:
+        {sample_data}
+
+        Write 2-3 paragraphs describing what this dataset appears to be about, what kind of analysis it might support, and any notable characteristics. Use natural language, not bullet points.
+        """
+        
+        try:
+            response = llm.invoke([HumanMessage(content=prompt)])
+            description = response.content.strip()
+        except Exception as e:
+            print(f"DEBUG: LLM description generation failed: {e}")
+            # Fallback to basic description
+            description = f"This is a dataset named {filename} with {num_rows:,} rows and {num_cols} columns. It contains data about {', '.join(columns_list[:3])}{' and more' if len(columns_list) > 3 else ''}. The dataset has {missing_count:,} missing values and appears ready for analysis."
+        
+        # Store in chat_store
+        chat_store["description"] = description
+        print(f"DEBUG: Description stored in chat_store")
+        
+        return f"Dataset description generated and stored: {description[:100]}..."
+
     return [
         query_dataframe, 
         get_dataframe_info, 
@@ -175,7 +223,8 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         get_unique_values, 
         get_correlations, 
         get_missing_values, 
-        generate_plot
+        generate_plot,
+        generate_description
     ]
 
 def _force_final_answer(llm: ChatNVIDIA, question: str, intermediate_steps: list) -> str:
@@ -224,13 +273,21 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
         chat_store["plots"] = []
     tools = create_analysis_tools(df, tool_context, chat_store)
 
-    # 4. Prepare Prompt
+    # 4. Detect first-run
+    is_first_run = len(history.messages) == 0
+    first_run_instructions = ""
+
     all_prompts = load_prompts()
+    if is_first_run:
+        first_run_instructions = "\n" + all_prompts["agent_prompts"].get("first_run_prompt", "")
+
+    # 5. Prepare Prompt
     sys_prompt = all_prompts["agent_prompts"]["analyst_agent"].format(
         filename=tool_context["filename"],
         rows=df.shape[0],
         columns=tool_context["columns"],
-        preview=tool_context["preview"]
+        preview=tool_context["preview"],
+        first_run_instructions=first_run_instructions
     )
 
     prompt = ChatPromptTemplate.from_messages([
@@ -240,7 +297,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
 
-    # 5. Initialize Agent
+    # 6. Initialize Agent
     agent = create_tool_calling_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent, 
@@ -272,7 +329,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     except Exception as e:
         output = f"I encountered an error while analyzing the data: {str(e)}"
     
-    # 6. Update History
+    # 7. Update History
     if message:
         history.add_user_message(message)
     history.add_ai_message(output)
