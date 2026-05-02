@@ -205,9 +205,8 @@ export class AppComponent {
         next: (uploadResponse) => {
           currentChat.backendChatId = uploadResponse.chat_id;
           this.tempUploadedFile = null;
-          this.refreshDescription(currentChat);
 
-          // 2. Sofort die eigentliche Nachricht hinterher (mit chat_id)
+          //Beschreibung wird nach der Antwort aktualisiert.
           this.callChatApi(message, currentChat);
         },
         error: (error) => {
