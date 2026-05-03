@@ -78,20 +78,24 @@ async def upload_csv(file: UploadFile = File(...)):
     
     try:
         # delimiter erkennen
-        #delimiter = detect_delimiter(file.file)
+        delimiter = detect_delimiter(file.file)
 
         # header erkennen 
-        #header_exists = has_header(file.file)
+        header_exists = has_header(file.file)
         
-        #if header_exists:
-        #    df = pd.read_csv(file.file, delimiter=delimiter)
-        #else:
-        #    df = pd.read_csv(file.file, delimiter=delimiter, header=None)
+        if header_exists:
+           df = pd.read_csv(file.file, delimiter=delimiter)
+        else:
+           df = pd.read_csv(file.file, delimiter=delimiter, header=None)
 
         df = pd.read_csv(file.file)
 
-    except Exception:
-        raise HTTPException(status_code=400, detail="CSV-Datei konnte nicht gelesen werden.")
+    except Exception as e:
+        print("CSV Fehler:", e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV-Datei konnte nicht gelesen werden: {str(e)}"
+        )
     
     chat_id = f"chat_{next(chat_counter)}" 
 
