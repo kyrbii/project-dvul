@@ -1,52 +1,39 @@
 # project-dvul
 
-see our documentation @ [Our Confluence](https://dvul.atlassian.net/wiki/spaces/dvul/overview)
-
 ## Testing
 
-First, sync your environment:
+First, bring your environment up to speed:
 ```bash
 uv sync
+cd frontend
+npm install --legacy-peer-deps
+cd ..
 ```
 
-**Terminal (Backend):**
+**Start the Backend:**
+Terminal 1
+
 ```bash
 uv run uvicorn backend.main:app --port 8000 --reload
 ```
 
-**Browser:**
-http://localhost:8000/docs
+**Start the Frontend:**
+Terminal 2
+
+```bash
+cd frontend
+npm start
+```
+**Open the App:**
+[Frontend in the Web](http://localhost:4200)
 
 
 ## Running locally
-
 ### Using Docker (Recommended)
 The easiest way to run the application securely is by using Docker Compose. Make sure Docker is installed on your system.
 
 ```bash
-sudo docker compose up --build
+sudo docker compose -f docker-compose.prod.yml up
 ```
 
-- **Frontend Interface (Streamlit)**: [http://localhost:8501](http://localhost:8501)
-- **Backend API & Docs (FastAPI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-
-### Using `uv` Natively
-If you prefer running natively without containers, ensure uv is installed
-
-First, sync your environment:
-```bash
-uv sync
-```
-
-Then, open two separate terminals in the project root:
-
-**Terminal 1 (Backend):**
-```bash
-uv run uvicorn backend.main:app --port 8000 --reload
-```
-
-**Terminal 2 (Frontend):**
-```bash
-API_URL=http://localhost:8000 uv run streamlit run frontend/app.py --server.port 8501
-```
+ **Backend API & Docs (FastAPI)**: [Swagger UI](http://localhost:8000/docs)

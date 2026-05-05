@@ -27,6 +27,13 @@ export interface ChatPlotsResponse {
   plots: BackendPlot[];
 }
 
+export interface ChatDescriptionResponse {
+  chat_id?: string;
+  description?: string;
+  summary?: string;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -60,6 +67,13 @@ export class ChatService {
 
   getPlots(chatId: string): Observable<ChatPlotsResponse> {
     return this.http.get<ChatPlotsResponse>(`${this.apiUrl}/plots/${chatId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getDescription(chatId: string): Observable<ChatDescriptionResponse> {
+    return this.http.get<ChatDescriptionResponse>(`${this.apiUrl}/description/${chatId}`)
       .pipe(
         catchError(this.handleError)
       );

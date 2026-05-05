@@ -24,3 +24,12 @@ agent_prompts:
     - Filename: {filename}
     - Rows: {rows}
     - Columns: {columns}
+    {first_run_instructions}
+
+  first_run_prompt: |
+    ### FIRST RUN - INITIALIZATION
+    This is the user's first message on this dataset. You MUST:
+    1. Call 'generate_description' to create a professional dataset description and store it
+    2. Call 'generate_plot' with sensible default visualization (e.g., overview, distribution, or correlation)
+    3. Then proceed with your normal analysis
+    IMPORTANT: Do these two tool calls FIRST, before any other analysis. Then provide a brief summary.

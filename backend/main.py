@@ -77,30 +77,36 @@ async def upload_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Nur CSV-Dateien sind erlaubt!")
     
     try:
-        # delimiter erkennen
-        delimiter = detect_delimiter(file.file)
+        # # delimiter erkennen
+        #  delimiter = detect_delimiter(file.file)
 
-        # header erkennen 
-        header_exists = has_header(file.file)
-        
-        if header_exists:
-            df = pd.read_csv(file.file, delimiter=delimiter)
-        else:
-            df = pd.read_csv(file.file, delimiter=delimiter, header=None)
+        # # header erkennen 
+        # header_exists = has_header(file.file)
+        # 
+        # if header_exists:
+        #    df = pd.read_csv(file.file, delimiter=delimiter)
+        # else:
+        #    df = pd.read_csv(file.file, delimiter=delimiter, header=None)
 
-    except Exception:
-        raise HTTPException(status_code=400, detail="CSV-Datei konnte nicht gelesen werden.")
+        df = pd.read_csv(file.file)
+
+    except Exception as e:
+        print("CSV Fehler:", e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV-Datei konnte nicht gelesen werden: {str(e)}"
+        )
     
-    chat_id = f"chat_{next(chat_counter)}"
+    chat_id = f"chat_{next(chat_counter)}" 
 
     summary = create_dataset_summary(df)
 
     chat_store[chat_id] = {             # @Korbi du musst dann in der get_llm_repsonse auch die summary miteinbeziehen fürs LLM
         "filename": file.filename,
-        "dataframe": df,
-        "summary": summary,
-        "messages": [],
-        "plots": []
+        "dataframe": df# ,
+        # "summary": summary,
+        # "messages": [],
+        # "plots": []
 }
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
@@ -112,6 +118,15 @@ async def upload_csv(file: UploadFile = File(...)):
         "summary": summary
         }
 
+@app.get("/description/{chat_id}")
+def get_description(chat_id: str):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+    
+    return {
+        "chat_id": chat_id,
+        "summary": chat_store[chat_id]["description"]
+    }
 
 @app.get("/plots/{chat_id}/{plot_index}")               # für einen einzelnen Plot
 def get_plots(chat_id: str, plot_index: int):
