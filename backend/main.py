@@ -77,16 +77,16 @@ async def upload_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Nur CSV-Dateien sind erlaubt!")
     
     try:
-        # delimiter erkennen
-        delimiter = detect_delimiter(file.file)
+        # # delimiter erkennen
+        #  delimiter = detect_delimiter(file.file)
 
-        # header erkennen 
-        header_exists = has_header(file.file)
-        
-        if header_exists:
-           df = pd.read_csv(file.file, delimiter=delimiter)
-        else:
-           df = pd.read_csv(file.file, delimiter=delimiter, header=None)
+        # # header erkennen 
+        # header_exists = has_header(file.file)
+        # 
+        # if header_exists:
+        #    df = pd.read_csv(file.file, delimiter=delimiter)
+        # else:
+        #    df = pd.read_csv(file.file, delimiter=delimiter, header=None)
 
         df = pd.read_csv(file.file)
 
