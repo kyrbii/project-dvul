@@ -10,11 +10,12 @@ import pandas as pd
 from typing import Dict, Any
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
+import yaml
 
 langchain.debug = True
 # --- Utility Functions ---
 
-import yaml
+
 
 def load_prompts():
     path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
@@ -212,7 +213,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         
         # Store in chat_store
         chat_store["description"] = description
-        print(f"DEBUG: Description stored in chat_store")
+        print("DEBUG: Description stored in chat_store")
         
         return f"Dataset description generated and stored: {description[:100]}..."
 
@@ -230,20 +231,27 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 def _force_final_answer(llm: ChatNVIDIA, question: str, intermediate_steps: list) -> str:
     """
     Called when the agent hits max_iterations without producing a final answer.
-    Sends all intermediate work to the LLM and asks it to summarize into a coherent reply.
+    Extracts key insights from intermediate steps and asks LLM to provide a direct answer.
     """
-    steps_summary = []
+    # Extract insights from observations, not tool names/calls
+    key_findings = []
     for action, observation in intermediate_steps:
-        steps_summary.append(f"- Tool `{action.tool}` returned: {str(observation)[:300]}")
+        obs_text = str(observation)
+        # Keep only the most useful part, avoid technical details
+        if len(obs_text) > 500:
+            obs_text = obs_text[:500] + "..."
+        key_findings.append(obs_text)
 
-    steps_text = "\n".join(steps_summary) if steps_summary else "No tool results available."
+    findings_text = "\n".join(key_findings[-5:]) if key_findings else "No findings available."
 
     forced_prompt = (
-        f"The user asked: {question}\n\n"
-        f"You gathered the following information:\n{steps_text}\n\n"
-        "Based solely on the information above, write a clear, concise final answer "
-        "It should not include code, but directly address the user's question using the insights from the tools. This answer will be presented"
-        "for the user. Do not call any more tools. Do not say you cannot answer. Do it in a Markdown Format."
+        f"User Question: {question}\n\n"
+        f"Analysis Results:\n{findings_text}\n\n"
+        "Write a clear, direct answer to the user's question starting with 'SUMMARY:'. "
+        "Focus on answering their question using the analysis results above. "
+        "Do not explain the analysis process or tools used. "
+        "Reference any plots that were created (e.g., 'See Plot #1'). "
+        "Keep it professional and concise in Markdown format."
     )
 
     print("DEBUG: Agent hit iteration limit — forcing final answer via direct LLM call.")
@@ -319,13 +327,20 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
             "chat_history": trimmed_history
         })
         output = response["output"]
-        is_incomplete = (
-            not output
-            or "agent stopped" in output.lower()
-            or output.strip().startswith(("I need to", "I should", "Let me", "Now "))
-        )
-        if is_incomplete:
-            output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
+        
+        # Check if output contains SUMMARY and extract it
+        if "SUMMARY:" in output.upper():
+            summary_index = output.upper().find("SUMMARY:")
+            output = output[summary_index:]
+        else:
+            # Check if it's incomplete and needs forced final answer
+            is_incomplete = (
+                not output
+                or "agent stopped" in output.lower()
+                or output.strip().startswith(("I need to", "I should", "Let me", "Now "))
+            )
+            if is_incomplete:
+                output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
     except Exception as e:
         output = f"I encountered an error while analyzing the data: {str(e)}"
     

@@ -16,8 +16,6 @@ class ChatResponse(BaseModel):
     bot_message: str = Field(description="Response to the user_message to be displayed in chat")
     plot_reference: List[int] = Field(description="List of plot references to be displayed in chat")
 
-# ? @Sandra
-# ToDo: change fields to pd.DataFrame.describe() output, and file name and header Row (maybe)
 class FileInfo(BaseModel):
     filename: str
     rows: int
