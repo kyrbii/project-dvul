@@ -16,6 +16,7 @@ dependencies = [
     "seaborn>=0.13.2",
     "numpy>=2.4.1",
     "pandas>=2.4.0",
+    "langchain-openai>=1.2.1",
 ]
 
 [tool.ruff]

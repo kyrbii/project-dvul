@@ -6,7 +6,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 
-from backend.llm.llm_factory import get_llm
+from backend.llm.llm_instance import get_llm
 from backend.llm.session_history import get_session_history
 from backend.llm.tools import create_analysis_tools
 

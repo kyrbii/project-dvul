@@ -6,7 +6,7 @@ import pandas as pd
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 
-from backend.llm.llm_factory import get_llm
+from backend.llm.llm_instance import get_llm
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
 
