@@ -28,6 +28,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 
     @tool
     def query_dataframe(code: str) -> str:
+        """Execute a single-line pandas expression against the loaded DataFrame."""
         if "\n" in code or "=" in code:
             return "Error: Only single-line expressions without assignments are allowed. Use a single pandas chain."
 
@@ -42,22 +43,26 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 
     @tool
     def get_dataframe_info(dummy: str = "") -> str:
+        """Return schema and non-null counts for the DataFrame."""
         buffer = io.StringIO()
         df.info(buf=buffer)
         return buffer.getvalue()
 
     @tool
     def get_dataframe_summary(dummy: str = "") -> str:
+        """Return descriptive statistics for numerical DataFrame columns."""
         return str(df.describe())
 
     @tool
     def get_unique_values(column_name: str) -> str:
+        """Return the top unique values and counts for the specified column."""
         if column_name not in df.columns:
             return f"Error: Column '{column_name}' not found."
         return str(df[column_name].value_counts().head(10))
 
     @tool
     def get_correlations(dummy: str = "") -> str:
+        """Return the Pearson correlation matrix for numerical DataFrame columns."""
         print("DEBUG: Agent calling 'get_correlations'")
         numeric_df = df.select_dtypes(include=["number"])
         if numeric_df.empty:
@@ -66,12 +71,14 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 
     @tool
     def get_missing_values(dummy: str = "") -> str:
+        """Return a count of missing values for each DataFrame column."""
         print("DEBUG: Agent calling 'get_missing_values'")
         missing = df.isnull().sum()
         return str(missing[missing > 0]) if missing.any() else "No missing values detected."
 
     @tool
     def generate_plot(instructions: str) -> str:
+        """Generate a plot from natural language instructions and store it in the chat session."""
         print(f"DEBUG: Agent requested plot: {instructions}")
         try:
             plot_data = get_plot_code(instructions, context)
@@ -97,6 +104,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 
     @tool
     def generate_description(dummy: str = "") -> str:
+        """Generate a natural-language description of the dataset using the LLM."""
         print("DEBUG: Agent calling 'generate_description'")
         filename = context.get("filename", "Unknown")
         num_rows = df.shape[0]
