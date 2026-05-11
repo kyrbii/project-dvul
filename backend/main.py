@@ -1,5 +1,4 @@
 import logging
-import logging.config
 import os
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
@@ -8,55 +7,15 @@ from itertools import count
 import numpy as np
 import pandas as pd
 from backend.llm.service import get_llm_response
+from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
 import dotenv
 import csv
 
 dotenv.load_dotenv()
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-LOG_FILE = os.getenv("LOG_FILE", "backend.log")
-LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
-
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "default": {
-                "format": LOG_FORMAT,
-            }
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "formatter": "default",
-                "level": LOG_LEVEL,
-                "stream": "ext://sys.stdout",
-            },
-            "file": {
-                "class": "logging.FileHandler",
-                "formatter": "default",
-                "level": LOG_LEVEL,
-                "filename": LOG_FILE,
-                "encoding": "utf-8",
-                "mode": "a",
-            },
-        },
-        "loggers": {
-            "backend": {
-                "handlers": ["console", "file"],
-                "level": LOG_LEVEL,
-                "propagate": False,
-            }
-        },
-        "root": {
-            "level": "WARNING",
-            "handlers": ["console"],
-        },
-    }
-)
-logger = logging.getLogger("backend")
+setup_logging()
+logger = get_backend_logger()
 
 app = FastAPI()
 
