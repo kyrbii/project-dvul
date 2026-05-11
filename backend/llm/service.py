@@ -1,6 +1,9 @@
+import logging
 import models.messages as models
 from backend.llm.agent_connection import agent_call
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 def get_llm_response(chat_store: Dict[str, Any], message: str) -> models.ChatResponse:
   """
@@ -18,7 +21,7 @@ def get_llm_response(chat_store: Dict[str, Any], message: str) -> models.ChatRes
     new_plot_indices = list(range(initial_plot_count + 1, current_plot_count + 1))
     
   except Exception as e:
-    print(f"DEBUG: Service Error - {str(e)}")
+    logger.exception("Service Error")
     return chat_store, models.ChatResponse(
       bot_message="Error: Could not get response from the LLM. " + str(e),
       plot_reference=[]

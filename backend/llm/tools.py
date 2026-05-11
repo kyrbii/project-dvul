@@ -1,10 +1,13 @@
 import io
+import logging
 import os
 from typing import Any, Dict
 
 import pandas as pd
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
+
+logger = logging.getLogger(__name__)
 
 from backend.llm.llm_instance import get_llm
 from backend.llm.plot_agent import get_plot_code
@@ -20,7 +23,7 @@ def _save_debug_plot(svg_data: str, title: str, plot_index: int) -> None:
         with open(debug_path, "w") as f:
             f.write(svg_data)
     except Exception as exc:
-        print(f"DEBUG: Failed to save debug plot: {exc}")
+        logger.exception("Failed to save debug plot")
 
 
 def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store: Dict[str, Any]):
@@ -32,13 +35,13 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         if "\n" in code or "=" in code:
             return "Error: Only single-line expressions without assignments are allowed. Use a single pandas chain."
 
-        print(f"DEBUG: Agent calling 'query_dataframe' with code: {code}")
+        logger.debug("Agent calling 'query_dataframe' with code: %s", code)
         try:
             result = eval(code, {"df": df, "pd": pd})
-            print(f"DEBUG: 'query_dataframe' result: {str(result)[:100]}...")
+            logger.debug("'query_dataframe' result: %s", str(result)[:100] + '...')
             return str(result)
         except Exception as exc:
-            print(f"DEBUG: 'query_dataframe' error: {exc}")
+            logger.exception("Error executing query_dataframe code")
             return f"Error executing code: {exc}"
 
     @tool
@@ -63,7 +66,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_correlations(dummy: str = "") -> str:
         """Return the Pearson correlation matrix for numerical DataFrame columns."""
-        print("DEBUG: Agent calling 'get_correlations'")
+        logger.debug("Agent calling 'get_correlations'")
         numeric_df = df.select_dtypes(include=["number"])
         if numeric_df.empty:
             return "No numerical columns found for correlation analysis."
@@ -72,14 +75,14 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_missing_values(dummy: str = "") -> str:
         """Return a count of missing values for each DataFrame column."""
-        print("DEBUG: Agent calling 'get_missing_values'")
+        logger.debug("Agent calling 'get_missing_values'")
         missing = df.isnull().sum()
         return str(missing[missing > 0]) if missing.any() else "No missing values detected."
 
     @tool
     def generate_plot(instructions: str) -> str:
         """Generate a plot from natural language instructions and store it in the chat session."""
-        print(f"DEBUG: Agent requested plot: {instructions}")
+        logger.debug("Agent requested plot: %s", instructions)
         try:
             plot_data = get_plot_code(instructions, context)
             svg_data = execute_plot_code(plot_data.code, df)
@@ -96,16 +99,16 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
 
             _save_debug_plot(svg_data, plot_data.title, plot_index)
 
-            print(f"DEBUG: Plot #{plot_index} ({plot_data.title}) generated and stored.")
+            logger.debug("Plot #%d (%s) generated and stored.", plot_index, plot_data.title)
             return f"Plot successfully generated and stored as Plot #{plot_index}: '{plot_data.title}'"
         except Exception as exc:
-            print(f"DEBUG: generate_plot error: {exc}")
+            logger.exception("Error generating plot")
             return f"Error generating plot: {exc}"
 
     @tool
     def generate_description(dummy: str = "") -> str:
         """Generate a natural-language description of the dataset using the LLM."""
-        print("DEBUG: Agent calling 'generate_description'")
+        logger.debug("Agent calling 'generate_description'")
         filename = context.get("filename", "Unknown")
         num_rows = df.shape[0]
         num_cols = df.shape[1]
@@ -134,7 +137,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             response = llm.invoke([HumanMessage(content=prompt)])
             description = response.content.strip()
         except Exception as exc:
-            print(f"DEBUG: LLM description generation failed: {exc}")
+            logger.exception("LLM description generation failed")
             description = (
                 f"This is a dataset named {filename} with {num_rows:,} rows and {num_cols} columns. "
                 f"It contains data about {', '.join(columns_list[:3])}"
@@ -143,7 +146,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             )
 
         chat_store["description"] = description
-        print("DEBUG: Description stored in chat_store")
+        logger.debug("Description stored in chat_store")
         return f"Dataset description generated and stored: {description[:100]}..."
 
     return [

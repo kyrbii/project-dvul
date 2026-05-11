@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any, Dict
 
@@ -5,6 +6,8 @@ import langchain
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
+
+logger = logging.getLogger(__name__)
 
 from backend.llm.llm_instance import get_llm
 from backend.llm.session_history import get_session_history
@@ -41,7 +44,7 @@ def _force_final_answer(llm: Any, question: str, intermediate_steps: list) -> st
         "Keep it professional and concise in Markdown format."
     )
 
-    print("DEBUG: Agent hit iteration limit — forcing final answer via direct LLM call.")
+    logger.debug("Agent hit iteration limit — forcing final answer via direct LLM call.")
     response = llm.invoke([HumanMessage(content=forced_prompt)])
     return response.content
 
@@ -97,7 +100,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     trimmed_history = history.messages[-limit:] if len(history.messages) > limit else history.messages
 
     try:
-        print("DEBUG: Starting LLM execution (Thinking/Answering phase)...")
+        logger.debug("Starting LLM execution (Thinking/Answering phase)...")
         response = agent_executor.invoke(
             {
                 "user_input": message or "Give me a summary of the data.",

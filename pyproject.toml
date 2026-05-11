@@ -17,6 +17,7 @@ dependencies = [
     "numpy>=2.4.1",
     "pandas>=2.4.0",
     "langchain-openai>=1.2.1",
+    "logging>=0.4.9.6",
 ]
 
 [tool.ruff]
