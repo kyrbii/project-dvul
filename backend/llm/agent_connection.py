@@ -9,7 +9,7 @@ from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 
 logger = logging.getLogger(__name__)
 
-from backend.llm.llm_instance import get_llm
+from backend.llm.llm_instance import get_llm_instance
 from backend.llm.session_history import get_session_history
 from backend.llm.tools import create_analysis_tools
 
@@ -52,7 +52,8 @@ def _force_final_answer(llm: Any, question: str, intermediate_steps: list) -> st
 def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_iterations: int = 15):
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
-    llm = get_llm()
+    #llm = get_llm()
+    llm = get_llm_instance(local=True)
 
     tool_context = {
         "filename": chat_store.get("filename", "Unknown"),

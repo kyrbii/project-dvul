@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
-from backend.llm.llm_instance import get_llm
+from backend.llm.llm_instance import get_llm_instance
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
 
@@ -117,7 +117,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         missing_count = df.isnull().sum().sum()
         sample_data = df.head(3).to_string()
 
-        llm = get_llm()
+        llm = get_llm_instance(local=False)
         prompt = f"""
         Write a concise, human-like overview description of this dataset. Make it sound natural and informative, like a data analyst describing the dataset to a colleague.
 
