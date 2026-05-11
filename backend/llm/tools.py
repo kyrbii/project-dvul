@@ -7,11 +7,11 @@ import pandas as pd
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 
-logger = logging.getLogger(__name__)
-
 from backend.llm.llm_instance import get_llm_instance
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
+
+logger = logging.getLogger(__name__)
 
 
 def _save_debug_plot(svg_data: str, title: str, plot_index: int) -> None:
@@ -23,7 +23,7 @@ def _save_debug_plot(svg_data: str, title: str, plot_index: int) -> None:
         with open(debug_path, "w") as f:
             f.write(svg_data)
     except Exception as exc:
-        logger.exception("Failed to save debug plot")
+        logger.exception(f"Failed to save debug plot: {exc}")
 
 
 def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store: Dict[str, Any]):
@@ -41,7 +41,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             logger.debug("'query_dataframe' result: %s", str(result)[:100] + '...')
             return str(result)
         except Exception as exc:
-            logger.exception("Error executing query_dataframe code")
+            logger.exception(f"Error executing query_dataframe code: {exc}")
             return f"Error executing code: {exc}"
 
     @tool
@@ -102,7 +102,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             logger.debug("Plot #%d (%s) generated and stored.", plot_index, plot_data.title)
             return f"Plot successfully generated and stored as Plot #{plot_index}: '{plot_data.title}'"
         except Exception as exc:
-            logger.exception("Error generating plot")
+            logger.exception(f"Error generating plot: {exc}")
             return f"Error generating plot: {exc}"
 
     @tool
@@ -137,7 +137,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             response = llm.invoke([HumanMessage(content=prompt)])
             description = response.content.strip()
         except Exception as exc:
-            logger.exception("LLM description generation failed")
+            logger.exception(f"LLM description generation failed: {exc}")
             description = (
                 f"This is a dataset named {filename} with {num_rows:,} rows and {num_cols} columns. "
                 f"It contains data about {', '.join(columns_list[:3])}"

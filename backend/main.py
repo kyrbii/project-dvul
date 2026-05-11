@@ -1,6 +1,3 @@
-import logging
-import os
-
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
@@ -9,10 +6,7 @@ import pandas as pd
 from backend.llm.service import get_llm_response
 from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
-import dotenv
 import csv
-
-dotenv.load_dotenv()
 
 setup_logging()
 logger = get_backend_logger()
