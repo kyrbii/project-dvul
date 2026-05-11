@@ -51,8 +51,8 @@ def _force_final_answer(llm: Any, question: str, intermediate_steps: list) -> st
 def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_iterations: int = 15):
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
-    #llm = get_llm()
-    llm = get_llm_instance(local=True)
+    local_llm = False
+    llm = get_llm_instance(local= local_llm)
 
     tool_context = {
         "filename": chat_store.get("filename", "Unknown"),
