@@ -121,6 +121,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
             if is_incomplete:
                 output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
     except Exception as exc:
+        logger.exception("Error while analyzing the data")
         output = f"I encountered an error while analyzing the data: {exc}"
 
     if message:

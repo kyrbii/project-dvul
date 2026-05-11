@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import pandas as pd
 from itertools import count
@@ -6,6 +8,8 @@ from itertools import count
 from backend.llm.agent_connection import agent_call
 from models.messages import ChatRequest
 import dotenv
+
+logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
@@ -23,6 +27,7 @@ async def upload_csv(file: UploadFile = File(...)):
     try:
         df = pd.read_csv(file.file)
     except Exception as e:
+        logger.exception("Could not read CSV file")
         raise HTTPException(status_code=400, detail=f"Could not read CSV: {str(e)}")
     
     chat_id = f"test_chat_{next(chat_counter)}"

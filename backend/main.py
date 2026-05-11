@@ -1,3 +1,7 @@
+import logging
+import logging.config
+import os
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
@@ -9,6 +13,50 @@ import dotenv
 import csv
 
 dotenv.load_dotenv()
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_FILE = os.getenv("LOG_FILE", "backend.log")
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
+
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": LOG_FORMAT,
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "default",
+                "level": LOG_LEVEL,
+                "stream": "ext://sys.stdout",
+            },
+            "file": {
+                "class": "logging.FileHandler",
+                "formatter": "default",
+                "level": LOG_LEVEL,
+                "filename": LOG_FILE,
+                "encoding": "utf-8",
+                "mode": "a",
+            },
+        },
+        "loggers": {
+            "backend": {
+                "handlers": ["console", "file"],
+                "level": LOG_LEVEL,
+                "propagate": False,
+            }
+        },
+        "root": {
+            "level": "WARNING",
+            "handlers": ["console"],
+        },
+    }
+)
+logger = logging.getLogger("backend")
 
 app = FastAPI()
 
@@ -91,7 +139,7 @@ async def upload_csv(file: UploadFile = File(...)):
         df = pd.read_csv(file.file)
 
     except Exception as e:
-        print("CSV Fehler:", e)
+        logger.exception("CSV Fehler beim Einlesen der Datei")
         raise HTTPException(
             status_code=400,
             detail=f"CSV-Datei konnte nicht gelesen werden: {str(e)}"
