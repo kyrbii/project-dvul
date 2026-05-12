@@ -1,6 +1,9 @@
 import os
+import logging
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
+
+logger = logging.getLogger(__name__)
 
 def get_llm_instance(local: bool = False, model_name: str | None = None, api_key: str | None = None, **kwargs):
     """
