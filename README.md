@@ -1,6 +1,28 @@
-# project-dvul
+# Data Visualisation and understanding with LLMs (DVUL)
+Create your own plots and detailed descriptions for your csv datasets with an LLM.
 
-## Testing
+---
+### Visual to come
+---
+## Features
+- **Heavily specialized in creating plots**: This tools main objective is to provide the user with the best possible plots for a given use case and data set.
+- **Understand large data sets with ease**: With a detailed description, analysis and plots you are able to understand an unknown dataset at blazing speeds without having to take a single look into the data.
+---
+## Tech Stack
+- **Frontend**: Angular, TypeScript, node.js
+- **Backend**: FastAPI, Python, LangChain
+- **Deployment**: Docker
+---
+## Prerequisites
+- Latest version of `uv` by Astral.
+- npm
+- Docker Engine
+- Docker Compose
+---
+## Installation & Setup
+Clone the repository.
+
+### Developing & Testing
 
 First, bring your environment up to speed:
 ```bash
@@ -24,16 +46,13 @@ Terminal 2
 cd frontend
 npm start
 ```
+
 **Open the App:**
 [Frontend in the Web](http://localhost:4200)
 
-
-## Running locally
-### Using Docker (Recommended)
-The easiest way to run the application securely is by using Docker Compose. Make sure Docker is installed on your system.
+### Production
+The easiest way to run the application securely is by using Docker Compose. Make sure Docker is installed on your system. This uses the latest Release of the GitHub Repository.
 
 ```bash
 sudo docker compose -f docker-compose.prod.yml up
 ```
-
- **Backend API & Docs (FastAPI)**: [Swagger UI](http://localhost:8000/docs)
