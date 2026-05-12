@@ -52,7 +52,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
     local_llm = False
-    llm = get_llm_instance(local= local_llm)
+    llm = get_llm_instance(local = local_llm)
 
     tool_context = {
         "filename": chat_store.get("filename", "Unknown"),
