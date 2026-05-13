@@ -210,3 +210,5 @@ __marimo__/
 .devcontainer/*
 
 debug_plots/*
+
+logs/*

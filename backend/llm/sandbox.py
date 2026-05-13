@@ -1,6 +1,10 @@
+import io
+import logging
+
 import matplotlib.pyplot as plt
 import pandas as pd
-import io
+
+logger = logging.getLogger(__name__)
 
 def execute_plot_code(code: str, df: pd.DataFrame) -> str:
     """
@@ -51,5 +55,6 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
         return "Error: Code executed but no matplotlib figure was produced."
             
     except Exception as e:
+        logger.exception("Sandbox plot execution error")
         plt.close('all')
         return f"Sandbox Error: {str(e)}"

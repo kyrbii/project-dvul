@@ -1,7 +1,7 @@
 [project]
 name = "project-dvul"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi",
     "uvicorn",
@@ -16,6 +16,9 @@ dependencies = [
     "seaborn>=0.13.2",
     "numpy>=2.4.1",
     "pandas>=2.4.0",
+    "langchain-openai>=1.2.1",
+    "logging>=0.4.9.6",
+    "langchain-ollama>=1.1.0",
 ]
 
 [tool.ruff]

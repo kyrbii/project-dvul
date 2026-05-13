@@ -4,11 +4,15 @@ from itertools import count
 import numpy as np
 import pandas as pd
 from backend.llm.service import get_llm_response
+from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
-import dotenv
 import csv
+import dotenv
 
 dotenv.load_dotenv()
+
+setup_logging()
+logger = get_backend_logger()
 
 app = FastAPI()
 
@@ -91,7 +95,7 @@ async def upload_csv(file: UploadFile = File(...)):
         df = pd.read_csv(file.file)
 
     except Exception as e:
-        print("CSV Fehler:", e)
+        logger.exception("CSV Fehler beim Einlesen der Datei")
         raise HTTPException(
             status_code=400,
             detail=f"CSV-Datei konnte nicht gelesen werden: {str(e)}"
