@@ -1,68 +1,93 @@
-import logging
+from pathlib import Path
+import pytest
+from fastapi.testclient import TestClient
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
-import pandas as pd
-from itertools import count
+from backend.main import app, chat_store
 
-# Import the new agent logic
-from backend.llm.agent_connection import agent_call
-from models.messages import ChatRequest
-import dotenv
 
-logger = logging.getLogger(__name__)
+REFERENCE_FILE = Path(__file__).resolve().parents[1] / "references" / "StudentPerformanceFactors.csv"
 
-dotenv.load_dotenv()
 
-app = FastAPI(title="Agent Test API")
+@pytest.fixture
+def client():
+    """Provide a TestClient for the FastAPI app."""
+    return TestClient(app)
 
-# Setup state (similar to main.py)
-chat_counter = count(1)
-chat_store = {}
 
-@app.post("/upload-csv")
-async def upload_csv(file: UploadFile = File(...)):
-    if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files allowed.")
-    
-    try:
-        df = pd.read_csv(file.file)
-    except Exception as e:
-        logger.exception("Could not read CSV file")
-        raise HTTPException(status_code=400, detail=f"Could not read CSV: {str(e)}")
-    
-    chat_id = f"test_chat_{next(chat_counter)}"
-    
-    # Store the dataframe for the agent
-    chat_store[chat_id] = {
-        "filename": file.filename,
-        "dataframe": df
+@pytest.fixture
+def uploaded_chat_id(client):
+    """Upload the test CSV and return the chat_id."""
+    if not REFERENCE_FILE.exists():
+        pytest.skip(f"Reference file not found: {REFERENCE_FILE}")
+
+    with REFERENCE_FILE.open("rb") as handle:
+        response = client.post(
+            "/upload-csv",
+            files={"file": (REFERENCE_FILE.name, handle, "text/csv")},
+        )
+
+    assert response.status_code == 200, f"Upload failed: {response.text}"
+    data = response.json()
+    chat_id = data.get("chat_id")
+    assert chat_id, "Upload response did not return chat_id"
+    return chat_id
+
+
+def test_upload_csv(client):
+    """Test that CSV upload succeeds and returns a valid chat_id."""
+    if not REFERENCE_FILE.exists():
+        pytest.skip(f"Reference file not found: {REFERENCE_FILE}")
+
+    with REFERENCE_FILE.open("rb") as handle:
+        response = client.post(
+            "/upload-csv",
+            files={"file": (REFERENCE_FILE.name, handle, "text/csv")},
+        )
+
+    assert response.status_code == 200, f"Upload failed: {response.text}"
+    data = response.json()
+    assert "chat_id" in data
+    assert "filename" in data
+    assert "summary" in data
+
+
+def test_chat_request(client, uploaded_chat_id):
+    """Test that a chat request returns HTTP 200 and a non-empty response."""
+    chat_payload = {
+        "chat_id": uploaded_chat_id,
+        "message": "Please generate a plot showing student performance distributions and any interesting correlations.",
     }
-    
-    return {
-        "chat_id": chat_id,
-        "message": "File uploaded successfully. You can now chat using this chat_id.",
-        "columns": list(df.columns),
-        "rows": len(df)
+
+    response = client.post("/chat", json=chat_payload)
+    assert response.status_code == 200, f"Chat request failed: {response.text}"
+
+    data = response.json()
+    assert "response" in data
+    assert isinstance(data["response"], str)
+    assert data["response"].strip(), "Chat response is empty"
+
+
+def test_plot_generation(client, uploaded_chat_id):
+    """Test that chat requests trigger plot generation and store them in the session."""
+    chat_payload = {
+        "chat_id": uploaded_chat_id,
+        "message": "Please generate a plot showing student performance distributions and any interesting correlations.",
     }
 
-@app.post("/chat")
-async def chat(request: ChatRequest):
-    if not request.chat_id or request.chat_id not in chat_store:
-        raise HTTPException(status_code=404, detail="Chat ID not found. Please upload a CSV first.")
-    
-    # Call our new agent logic
-    # Note: agent_call returns (updated_chat_store, bot_message)
-    chat_store[request.chat_id], response_text = agent_call(
-        chat_store[request.chat_id], 
-        message=request.message,
-        max_iterations=10 # Allowing more tries for testing
-    )
-    
-    return {
-        "chat_id": request.chat_id,
-        "response": response_text
-    }
+    response = client.post("/chat", json=chat_payload)
+    assert response.status_code == 200
+
+    session = chat_store.get(uploaded_chat_id)
+    assert session is not None, f"No session found for chat_id {uploaded_chat_id}"
+    assert "plots" in session, "No plots were recorded in chat session"
+    assert len(session["plots"]) > 0, "Plot generation was not triggered"
+
+    # Verify plot structure
+    for plot in session["plots"]:
+        assert "title" in plot, "Plot missing 'title'"
+        assert "svg" in plot, "Plot missing 'svg'"
+        assert plot["svg"].strip(), "Plot SVG is empty"
+
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    pytest.main([__file__, "-v"])
