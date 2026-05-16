@@ -63,7 +63,16 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     if "plots" not in chat_store:
         chat_store["plots"] = []
 
-    tools = create_analysis_tools(df, tool_context, chat_store)
+    tools = create_analysis_tools(df, tool_context, chat_store, allowed_tools=[
+        "query_dataframe",
+        "get_dataframe_info",
+        "get_dataframe_summary",
+        "get_unique_values",
+        "get_correlations",
+        "get_missing_values",
+        "generate_plot",
+        "generate_description",
+    ])
     all_prompts = load_prompts()
 
     is_first_run = len(history.messages) == 0
