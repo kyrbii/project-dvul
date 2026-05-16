@@ -19,6 +19,7 @@ dependencies = [
     "langchain-openai>=1.2.1",
     "logging>=0.4.9.6",
     "langchain-ollama>=1.1.0",
+    "pytest>=9.0.3",
 ]
 
 [tool.ruff]
