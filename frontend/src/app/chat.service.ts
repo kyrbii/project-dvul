@@ -34,6 +34,19 @@ export interface ChatDescriptionResponse {
   message?: string;
 }
 
+export interface ChatActivityEvent {
+  index: number;
+  type: string;
+  message: string;
+  tool_name?: string;
+  tool_args?: Record<string, string>;
+}
+
+export interface ChatActivityResponse {
+  chat_id: string;
+  activity: ChatActivityEvent[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -74,6 +87,13 @@ export class ChatService {
 
   getDescription(chatId: string): Observable<ChatDescriptionResponse> {
     return this.http.get<ChatDescriptionResponse>(`${this.apiUrl}/description/${chatId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getActivity(chatId: string): Observable<ChatActivityResponse> {
+    return this.http.get<ChatActivityResponse>(`${this.apiUrl}/activity/${chatId}`)
       .pipe(
         catchError(this.handleError)
       );

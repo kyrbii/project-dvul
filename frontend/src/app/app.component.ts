@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, ViewChild, ElementRef } from '@angular/core';
-import { BackendPlot, ChatDescriptionResponse, ChatService, ChatResponse } from './chat.service';
+import { ChangeDetectorRef, Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { BackendPlot, ChatActivityEvent, ChatDescriptionResponse, ChatService, ChatResponse } from './chat.service';
 import { marked } from 'marked';
 
 interface ChatMessage {
@@ -7,6 +7,7 @@ interface ChatMessage {
   content: string;
   renderedContent?: string;
   timestamp: string;
+  isThinking?: boolean;
 }
 
 interface ChatPlot {
@@ -16,10 +17,17 @@ interface ChatPlot {
   available: boolean;
 }
 
+interface CsvPreview {
+  fileName: string;
+  headers: string[];
+  rows: string[][];
+}
+
 interface ChatSession {
   id: number;
   name: string;
   uploadedFileName?: string;
+  csvPreview?: CsvPreview;
   backendChatId?: string; // ID vom Backend (chat_1, chat_2, etc.)
   overview?: string;
   summary?: string;
@@ -35,13 +43,22 @@ interface ChatSession {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   draftMessage = '';
   selectedChat: ChatSession | null = null;
   chats: ChatSession[] = [];
   nextChatId = 1;
   tempUploadedFile: File | null = null; // Temporäre CSV-Datei
+  tempCsvPreview: CsvPreview | null = null;
   isLoading = false; // Für Ladezustand
+  private activeThinkingChat: ChatSession | null = null;
+  private activeThinkingMessage: ChatMessage | null = null;
+  private thinkingIntervalId: ReturnType<typeof setInterval> | null = null;
+  private activityPollingIntervalId: ReturnType<typeof setInterval> | null = null;
+  private activeActivityIndex = 0;
+  private receivedBackendActivity = false;
+  private thinkingStepIndex = 0;
+  private thinkingSteps: string[] = [];
 
   @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
 
@@ -58,14 +75,9 @@ export class AppComponent {
     this.createNewChat();
   }
 
-  get overviewText(): string {
-    if (!this.selectedChat) {
-      return 'Es wurde noch keine CSV Datei hochgeladen.';
-    }
-    return this.selectedChat.overview
-      ?? (this.selectedChat.uploadedFileName
-        ? `Aktuelle CSV: ${this.selectedChat.uploadedFileName}`
-        : 'Noch keine CSV für diesen Chat ausgewählt.');
+  ngOnDestroy(): void {
+    this.clearThinkingTimer();
+    this.clearActivityPolling();
   }
 
   get summaryText(): string {
@@ -105,6 +117,10 @@ export class AppComponent {
     return !!this.selectedChat?.uploadedFileName;
   }
 
+  get showCsvPreview(): boolean {
+    return !!this.selectedChat?.csvPreview;
+  }
+
   createNewChat(): void {
     const newChat: ChatSession = {
       id: this.nextChatId++,
@@ -126,12 +142,14 @@ export class AppComponent {
     this.chats = [newChat, ...this.chats];
     this.selectedChat = newChat;
     this.tempUploadedFile = null; // Temporäre Datei zurücksetzen
+    this.tempCsvPreview = null;
     this.draftMessage = '';
   }
 
   selectChat(chat: ChatSession): void {
     this.selectedChat = chat;
     this.tempUploadedFile = null; // Temporäre Datei zurücksetzen beim Chat-Wechsel
+    this.tempCsvPreview = null;
     this.draftMessage = '';
   }
 
@@ -144,6 +162,12 @@ export class AppComponent {
 
     // Temporär speichern (noch nicht in Chat überführen)
     this.tempUploadedFile = file;
+    this.tempCsvPreview = {
+      fileName: file.name,
+      headers: [],
+      rows: [],
+    };
+    this.readCsvPreview(file, this.selectedChat);
 
     // Chat-Namen setzen, wenn noch nicht geschehen
     if (!this.selectedChat.uploadedFileName) {
@@ -155,6 +179,7 @@ export class AppComponent {
 
   removeCsv(): void {
     this.tempUploadedFile = null;
+    this.tempCsvPreview = null;
   }
 
   sendMessage(): void {
@@ -190,6 +215,7 @@ export class AppComponent {
       renderedContent: this.escapeHtml(userContent),
       timestamp: this.timeStamp(),
     });
+    this.showThinkingMessage(currentChat, hasCsv);
 
     this.scrollToBottom();
 
@@ -200,11 +226,17 @@ export class AppComponent {
     if (hasCsv && uploadedFile) {
       // Direkt sperren, damit im aktiven Chat keine zweite CSV ausgewaehlt werden kann.
       currentChat.uploadedFileName = uploadedFile.name;
+      currentChat.csvPreview = this.tempCsvPreview ?? {
+        fileName: uploadedFile.name,
+        headers: [],
+        rows: [],
+      };
 
       this.chatService.uploadCsv(uploadedFile).subscribe({
         next: (uploadResponse) => {
           currentChat.backendChatId = uploadResponse.chat_id;
           this.tempUploadedFile = null;
+          this.tempCsvPreview = null;
 
           //Beschreibung wird nach der Antwort aktualisiert.
           this.callChatApi(message, currentChat);
@@ -224,6 +256,8 @@ export class AppComponent {
   }
 
   private callChatApi(message: string, chat: ChatSession): void {
+    this.startActivityPolling(chat);
+
     this.chatService.sendMessage(message, chat.backendChatId).subscribe({
       next: (response) => {
         this.handleApiResponse(response, chat);
@@ -239,6 +273,8 @@ export class AppComponent {
     const response = this.extractBotMessage(apiResponse);
     const plotIndices = apiResponse.response.plot_reference ?? [];
 
+    this.removeThinkingMessage(chat);
+
     chat.messages.push({
       role: 'bot',
       content: response,
@@ -251,7 +287,201 @@ export class AppComponent {
     this.syncPlots(chat, plotIndices);
   }
 
+  private showThinkingMessage(chat: ChatSession, includesCsv: boolean): void {
+    this.clearThinkingTimer();
+
+    this.thinkingSteps = includesCsv
+      ? [
+          'CSV wird hochgeladen und vorbereitet',
+          'Spalten und Datentypen werden geprüft',
+          'Auffälligkeiten und erste Muster werden gesucht',
+          'Antwort wird formuliert',
+        ]
+      : [
+          'Frage wird eingeordnet',
+          'Passende Informationen aus dem Datensatz werden gesucht',
+          'Antwort wird formuliert',
+        ];
+    this.thinkingStepIndex = 0;
+
+    const thinkingMessage: ChatMessage = {
+      role: 'bot',
+      content: this.thinkingSteps[0],
+      renderedContent: this.escapeHtml(this.thinkingSteps[0]),
+      timestamp: this.timeStamp(),
+      isThinking: true,
+    };
+
+    chat.messages.push(thinkingMessage);
+    this.activeThinkingChat = chat;
+    this.activeThinkingMessage = thinkingMessage;
+    this.thinkingIntervalId = setInterval(() => {
+      this.advanceThinkingMessage();
+    }, 2200);
+  }
+
+  private advanceThinkingMessage(): void {
+    if (!this.activeThinkingMessage || this.thinkingSteps.length === 0 || this.receivedBackendActivity) {
+      return;
+    }
+
+    this.thinkingStepIndex = (this.thinkingStepIndex + 1) % this.thinkingSteps.length;
+    const nextStep = this.thinkingSteps[this.thinkingStepIndex];
+    this.activeThinkingMessage.content = nextStep;
+    this.activeThinkingMessage.renderedContent = this.escapeHtml(nextStep);
+    this.refreshView();
+    this.scrollToBottom();
+  }
+
+  private removeThinkingMessage(chat: ChatSession): void {
+    this.clearThinkingTimer();
+    this.clearActivityPolling();
+
+    if (this.activeThinkingChat === chat && this.activeThinkingMessage) {
+      chat.messages = chat.messages.filter((message) => message !== this.activeThinkingMessage);
+    }
+
+    this.activeThinkingChat = null;
+    this.activeThinkingMessage = null;
+    this.activeActivityIndex = 0;
+    this.receivedBackendActivity = false;
+  }
+
+  private clearThinkingTimer(): void {
+    if (this.thinkingIntervalId) {
+      clearInterval(this.thinkingIntervalId);
+      this.thinkingIntervalId = null;
+    }
+  }
+
+  private startActivityPolling(chat: ChatSession): void {
+    if (!chat.backendChatId) {
+      return;
+    }
+
+    this.clearActivityPolling();
+    this.activeActivityIndex = 0;
+    this.receivedBackendActivity = false;
+    this.pollActivity(chat);
+    this.activityPollingIntervalId = setInterval(() => {
+      this.pollActivity(chat);
+    }, 1000);
+  }
+
+  private pollActivity(chat: ChatSession): void {
+    if (!chat.backendChatId || !this.activeThinkingMessage) {
+      return;
+    }
+
+    this.chatService.getActivity(chat.backendChatId).subscribe({
+      next: ({ activity }) => {
+        const nextEvents = activity.filter((event) => event.index > this.activeActivityIndex);
+        if (!nextEvents.length) {
+          return;
+        }
+
+        const latestEvent = nextEvents[nextEvents.length - 1];
+        this.activeActivityIndex = latestEvent.index;
+        this.updateThinkingMessageFromActivity(latestEvent);
+      },
+      error: () => {
+        // Activity polling is progressive enhancement; the chat response still handles errors.
+      }
+    });
+  }
+
+  private updateThinkingMessageFromActivity(event: ChatActivityEvent): void {
+    if (!this.activeThinkingMessage) {
+      return;
+    }
+
+    this.receivedBackendActivity = true;
+    this.activeThinkingMessage.content = event.message;
+    this.activeThinkingMessage.renderedContent = this.escapeHtml(event.message);
+    this.refreshView();
+    this.scrollToBottom();
+  }
+
+  private clearActivityPolling(): void {
+    if (this.activityPollingIntervalId) {
+      clearInterval(this.activityPollingIntervalId);
+      this.activityPollingIntervalId = null;
+    }
+  }
+
+  private readCsvPreview(file: File, chat: ChatSession): void {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      const preview = this.buildCsvPreview(file.name, text);
+
+      if (this.tempUploadedFile?.name === file.name) {
+        this.tempCsvPreview = preview;
+      }
+
+      if (chat.uploadedFileName === file.name) {
+        chat.csvPreview = preview;
+      }
+
+      this.refreshView();
+    };
+
+    reader.readAsText(file);
+  }
+
+  private buildCsvPreview(fileName: string, csvText: string): CsvPreview {
+    const lines = csvText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .slice(0, 3);
+    const delimiter = this.detectCsvDelimiter(lines[0] ?? '');
+    const parsedLines = lines.map((line) => this.parseCsvLine(line, delimiter));
+    const headers = parsedLines[0] ?? [];
+
+    return {
+      fileName,
+      headers,
+      rows: parsedLines.slice(1, 3),
+    };
+  }
+
+  private detectCsvDelimiter(headerLine: string): string {
+    const semicolonCount = this.parseCsvLine(headerLine, ';').length;
+    const commaCount = this.parseCsvLine(headerLine, ',').length;
+
+    return semicolonCount > commaCount ? ';' : ',';
+  }
+
+  private parseCsvLine(line: string, delimiter = ','): string[] {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let index = 0; index < line.length; index++) {
+      const character = line[index];
+      const nextCharacter = line[index + 1];
+
+      if (character === '"' && inQuotes && nextCharacter === '"') {
+        current += '"';
+        index++;
+      } else if (character === '"') {
+        inQuotes = !inQuotes;
+      } else if (character === delimiter && !inQuotes) {
+        values.push(current);
+        current = '';
+      } else {
+        current += character;
+      }
+    }
+
+    values.push(current);
+    return values;
+  }
+
   private handleApiError(error: any, chat: ChatSession): void {
+    this.removeThinkingMessage(chat);
     const errorMessage = error.message || 'Fehler bei der Kommunikation mit dem Backend';
     chat.messages.push({
       role: 'bot',
