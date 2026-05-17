@@ -38,16 +38,37 @@
     </section>
 
     <main class="panel center-panel">
-      <section class="overview-section">
-        <div class="overview-header">
-          <h1>Übersicht</h1>
-        </div>
-        <div class="overview-body">
-          <p>{{ overviewText }}</p>
-        </div>
-      </section>
+      <section class="chat-section" [class.has-csv-preview]="showCsvPreview">
+        <section class="csv-preview" *ngIf="showCsvPreview && selectedChat?.csvPreview as preview">
+          <div class="csv-preview-header">
+            <div>
+              <h3>Übersicht</h3>
+              <p class="hint">{{ preview.fileName }} · Headerzeile und erste 2 Zeilen</p>
+            </div>
+          </div>
 
-      <section class="chat-section">
+          <div class="csv-preview-table-wrap" *ngIf="preview.headers.length; else csvPreviewFallback">
+            <table class="csv-preview-table">
+              <thead>
+                <tr>
+                  <th *ngFor="let header of preview.headers">{{ header }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of preview.rows">
+                  <td *ngFor="let header of preview.headers; let columnIndex = index">
+                    {{ row[columnIndex] || '' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #csvPreviewFallback>
+            <div class="csv-preview-empty">Die CSV-Vorschau konnte nicht gelesen werden.</div>
+          </ng-template>
+        </section>
+
         <div class="chat-title-row">
           <div>
             <h2>CSV Assistent</h2>
@@ -58,8 +79,18 @@
         <div class="chat-window" #chatWindow>
           <ng-container *ngIf="selectedChat && selectedChat.messages.length; else emptyChat">
             <div class="message-row" *ngFor="let message of selectedChat.messages">
-              <div [class.user]="message.role === 'user'" [class.bot]="message.role === 'bot'" class="message-bubble">
+              <div
+                [class.user]="message.role === 'user'"
+                [class.bot]="message.role === 'bot'"
+                [class.thinking]="message.isThinking"
+                class="message-bubble"
+              >
                 <div class="message-content" [innerHTML]="message.renderedContent || message.content"></div>
+                <div class="thinking-dots" *ngIf="message.isThinking" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
                 <div class="message-time">{{ message.timestamp }}</div>
               </div>
             </div>

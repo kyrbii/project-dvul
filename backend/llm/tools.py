@@ -14,6 +14,38 @@ from backend.llm.sandbox import execute_plot_code
 logger = logging.getLogger(__name__)
 
 
+def _truncate_activity_value(value: Any, max_length: int = 120) -> str:
+    text = str(value)
+    return text if len(text) <= max_length else text[:max_length] + "..."
+
+
+def _record_agent_activity(
+    chat_store: Dict[str, Any],
+    message: str,
+    event_type: str = "tool",
+    tool_name: str | None = None,
+    tool_args: Dict[str, Any] | None = None,
+) -> None:
+    next_index = chat_store.setdefault("_activity_next_index", 1)
+    activity = chat_store.setdefault("activity", [])
+    event = {
+        "index": next_index,
+        "type": event_type,
+        "message": message,
+    }
+    chat_store["_activity_next_index"] = next_index + 1
+
+    if tool_name:
+        event["tool_name"] = tool_name
+    if tool_args is not None:
+        event["tool_args"] = {
+            key: _truncate_activity_value(value)
+            for key, value in tool_args.items()
+        }
+
+    activity.append(event)
+
+
 def _save_debug_plot(svg_data: str, title: str, plot_index: int) -> None:
     try:
         debug_dir = "debug_plots"
@@ -32,6 +64,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def query_dataframe(code: str) -> str:
         """Execute a single-line pandas expression against the loaded DataFrame."""
+        _record_agent_activity(
+            chat_store,
+            f"Invoking `query_dataframe` with `{{'code': '{_truncate_activity_value(code)}'}}`",
+            tool_name="query_dataframe",
+            tool_args={"code": code},
+        )
         if "\n" in code or "=" in code:
             return "Error: Only single-line expressions without assignments are allowed. Use a single pandas chain."
 
@@ -47,6 +85,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_dataframe_info(dummy: str = "") -> str:
         """Return schema and non-null counts for the DataFrame."""
+        _record_agent_activity(
+            chat_store,
+            "Invoking `get_dataframe_info` with `{'dummy': ''}`",
+            tool_name="get_dataframe_info",
+            tool_args={"dummy": dummy},
+        )
         buffer = io.StringIO()
         df.info(buf=buffer)
         return buffer.getvalue()
@@ -54,11 +98,23 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_dataframe_summary(dummy: str = "") -> str:
         """Return descriptive statistics for numerical DataFrame columns."""
+        _record_agent_activity(
+            chat_store,
+            "Invoking `get_dataframe_summary` with `{'dummy': ''}`",
+            tool_name="get_dataframe_summary",
+            tool_args={"dummy": dummy},
+        )
         return str(df.describe())
 
     @tool
     def get_unique_values(column_name: str) -> str:
         """Return the top unique values and counts for the specified column."""
+        _record_agent_activity(
+            chat_store,
+            f"Invoking `get_unique_values` with `{{'column_name': '{_truncate_activity_value(column_name)}'}}`",
+            tool_name="get_unique_values",
+            tool_args={"column_name": column_name},
+        )
         if column_name not in df.columns:
             return f"Error: Column '{column_name}' not found."
         return str(df[column_name].value_counts().head(10))
@@ -66,6 +122,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_correlations(dummy: str = "") -> str:
         """Return the Pearson correlation matrix for numerical DataFrame columns."""
+        _record_agent_activity(
+            chat_store,
+            "Invoking `get_correlations` with `{'dummy': ''}`",
+            tool_name="get_correlations",
+            tool_args={"dummy": dummy},
+        )
         logger.debug("Agent calling 'get_correlations'")
         numeric_df = df.select_dtypes(include=["number"])
         if numeric_df.empty:
@@ -75,6 +137,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def get_missing_values(dummy: str = "") -> str:
         """Return a count of missing values for each DataFrame column."""
+        _record_agent_activity(
+            chat_store,
+            "Invoking `get_missing_values` with `{'dummy': ''}`",
+            tool_name="get_missing_values",
+            tool_args={"dummy": dummy},
+        )
         logger.debug("Agent calling 'get_missing_values'")
         missing = df.isnull().sum()
         return str(missing[missing > 0]) if missing.any() else "No missing values detected."
@@ -82,6 +150,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def generate_plot(instructions: str) -> str:
         """Generate a plot from natural language instructions and store it in the chat session."""
+        _record_agent_activity(
+            chat_store,
+            f"Invoking `generate_plot` with `{{'instructions': '{_truncate_activity_value(instructions)}'}}`",
+            tool_name="generate_plot",
+            tool_args={"instructions": instructions},
+        )
         logger.debug("Agent requested plot: %s", instructions)
         try:
             plot_data = get_plot_code(instructions, context)
@@ -108,6 +182,12 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
     @tool
     def generate_description(dummy: str = "") -> str:
         """Generate a natural-language description of the dataset using the LLM."""
+        _record_agent_activity(
+            chat_store,
+            "Invoking `generate_description` with `{'dummy': ''}`",
+            tool_name="generate_description",
+            tool_args={"dummy": dummy},
+        )
         logger.debug("Agent calling 'generate_description'")
         filename = context.get("filename", "Unknown")
         num_rows = df.shape[0]

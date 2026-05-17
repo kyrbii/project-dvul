@@ -27,6 +27,24 @@ app.add_middleware(
 chat_counter = count(1)
 chat_store = {}
 
+MAX_ACTIVITY_EVENTS = 50
+
+def add_activity_event(chat_id: str, message: str, event_type: str = "agent") -> None:
+    if chat_id not in chat_store:
+        return
+
+    next_index = chat_store[chat_id].setdefault("_activity_next_index", 1)
+    activity = chat_store[chat_id].setdefault("activity", [])
+    activity.append({
+        "index": next_index,
+        "type": event_type,
+        "message": message,
+    })
+    chat_store[chat_id]["_activity_next_index"] = next_index + 1
+
+    if len(activity) > MAX_ACTIVITY_EVENTS:
+        chat_store[chat_id]["activity"] = activity[-MAX_ACTIVITY_EVENTS:]
+
 def detect_delimiter(file):
     sample = file.read(1024).decode("utf-8")
     file.seek(0)
@@ -63,11 +81,15 @@ def chat(request: ChatRequest):
 
     if request.chat_id not in chat_store:
         raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+
+    chat_store[request.chat_id]["activity"] = []
+    add_activity_event(request.chat_id, "Analyse wird gestartet", "agent")
     
     chat_store[request.chat_id], response = get_llm_response(
         chat_store[request.chat_id],
         message=request.message
     )
+    add_activity_event(request.chat_id, "Antwort wurde erstellt", "agent")
     
     return {
         "chat_id": request.chat_id,
@@ -107,7 +129,9 @@ async def upload_csv(file: UploadFile = File(...)):
 
     chat_store[chat_id] = {             # @Korbi du musst dann in der get_llm_repsonse auch die summary miteinbeziehen fürs LLM
         "filename": file.filename,
-        "dataframe": df# ,
+        "dataframe": df,
+        "activity": [],
+        "_activity_next_index": 1,
         # "summary": summary,
         # "messages": [],
         # "plots": []
@@ -121,6 +145,16 @@ async def upload_csv(file: UploadFile = File(...)):
         "filename": file.filename,
         "summary": summary
         }
+
+@app.get("/activity/{chat_id}")
+def get_activity(chat_id: str):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+
+    return {
+        "chat_id": chat_id,
+        "activity": chat_store[chat_id].get("activity", [])
+    }
 
 @app.get("/description/{chat_id}")
 def get_description(chat_id: str):

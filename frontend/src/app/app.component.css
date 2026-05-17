@@ -199,23 +199,6 @@
   text-align: center;
 }
 
-.overview-section {
-  border-bottom: 1px solid rgba(145, 158, 171, 0.16);
-}
-
-.overview-header {
-  padding: 24px 24px 16px;
-}
-
-.overview-body {
-  padding: 0 24px 24px;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  color: #3e4c6d;
-  font-size: 1.05rem;
-}
-
 .chat-section {
   flex: 1;
   display: flex;
@@ -241,6 +224,83 @@
   color: #5f6c87;
 }
 
+.csv-preview {
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: 220px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(145, 158, 171, 0.2);
+  border-radius: 16px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.csv-preview-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+.csv-preview-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.csv-preview-header .hint {
+  margin: 4px 0 0;
+  color: #5f6c87;
+  font-size: 0.9rem;
+}
+
+.csv-preview-table-wrap {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.csv-preview-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.88rem;
+}
+
+.csv-preview-table th,
+.csv-preview-table td {
+  min-width: 120px;
+  max-width: 260px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(145, 158, 171, 0.14);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.csv-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef4ff;
+  color: #172b4d;
+  font-weight: 700;
+}
+
+.csv-preview-table td {
+  color: #3e4c6d;
+}
+
+.csv-preview-empty {
+  margin: auto;
+  padding: 18px;
+  color: #5f6c87;
+  text-align: center;
+}
+
 .chat-window {
   flex: 1;
   min-height: 0;
@@ -252,6 +312,10 @@
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+}
+
+.chat-section.has-csv-preview .chat-window {
+  flex: 1 1 auto;
 }
 
 .empty-chat-placeholder {
@@ -290,6 +354,57 @@
   background: #eef4ff;
   color: #172b4d;
   border-bottom-left-radius: 6px;
+}
+
+.message-bubble.thinking {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+  background: #f2f6ff;
+  border: 1px solid rgba(29, 78, 216, 0.16);
+  color: #3e4c6d;
+}
+
+.message-bubble.thinking .message-time {
+  grid-column: 1 / -1;
+}
+
+.thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #1d4ed8;
+  opacity: 0.35;
+  animation: thinkingPulse 1.2s ease-in-out infinite;
+}
+
+.thinking-dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.thinking-dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes thinkingPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 
 .message-bubble.user .message-content {
@@ -579,27 +694,30 @@
 
   .panel-header,
   .panel-body,
-  .overview-header,
-  .overview-body,
   .chat-section {
     padding-left: 16px;
     padding-right: 16px;
   }
 
   .panel-header,
-  .panel-body,
-  .overview-header {
+  .panel-body {
     padding-top: 16px;
-    padding-bottom: 16px;
-  }
-
-  .overview-body {
     padding-bottom: 16px;
   }
 
   .chat-section {
     padding-top: 16px;
     padding-bottom: 16px;
+  }
+
+  .chat-title-row {
+    margin-bottom: 0;
+  }
+
+  .csv-preview {
+    max-height: 200px;
+    min-height: 0;
+    margin-bottom: 12px;
   }
 
   .message-input,
