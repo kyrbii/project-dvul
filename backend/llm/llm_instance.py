@@ -5,10 +5,15 @@ from langchain_ollama import ChatOllama
 
 logger = logging.getLogger(__name__)
 
-def get_llm_instance(local: bool = False, model_name: str | None = None, api_key: str | None = None, **kwargs):
+def get_llm_instance(local: bool = False, model_name: str | None = None, api_key: str | None = None, structured_output_model: type | None = None, **kwargs):
     """
     Returns a configured LangChain LLM instance.
     If local=True, uses local Ollama; otherwise, uses OpenRouter.
+
+    If `structured_output_model` is provided, this function will attempt to
+    call `.with_structured_output(structured_output_model)` on the returned
+    LLM instance. If the LLM wrapper doesn't support that method, a warning
+    is logged and the raw LLM is returned.
     """
     if local:
         # Local Ollama
@@ -26,7 +31,7 @@ def get_llm_instance(local: bool = False, model_name: str | None = None, api_key
             raise RuntimeError("OPENROUTER_MODEL and OPENROUTER_API_KEY must be set in the environment.")
         
         logger.debug(f"Using remote OpenRouter model: {model}")
-        return ChatOpenAI(
+        llm = ChatOpenAI(
             model=model,
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
@@ -38,3 +43,11 @@ def get_llm_instance(local: bool = False, model_name: str | None = None, api_key
             },
             **kwargs
         )
+
+        if structured_output_model is not None:
+            try:
+                llm = llm.with_structured_output(structured_output_model)
+            except AttributeError:
+                logger.warning("LLM instance does not support with_structured_output(); returning raw LLM")
+
+        return llm
