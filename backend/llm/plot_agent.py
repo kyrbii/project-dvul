@@ -1,5 +1,5 @@
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import ChatPromptTemplate
+from backend.llm.llm_instance import get_llm_instance
 from models.messages import PlotCodeOutput
 import os
 import yaml
@@ -14,11 +14,8 @@ def get_plot_code(instructions: str, context: Dict[str, Any]) -> PlotCodeOutput:
     """
     Calls a specialized LLM to generate plotting code based on instructions.
     """
-    llm = ChatNVIDIA(
-        model=os.getenv("LLM_MODEL"),
-        api_key=os.getenv("LLM_API_KEY"),
-        temperature=0.1
-    ).with_structured_output(PlotCodeOutput)
+    
+    llm = get_llm_instance(structured_output_model=PlotCodeOutput)
     
     all_prompts = load_prompts()
     prompt = ChatPromptTemplate.from_messages([
