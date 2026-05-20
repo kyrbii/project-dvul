@@ -1,4 +1,3 @@
-import pytest
 from models.messages import PlotCodeOutput
 from backend.llm import llm_instance
 
