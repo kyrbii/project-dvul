@@ -2,10 +2,8 @@ import logging
 import os
 from typing import Any, Dict
 
-import langchain
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langgraph.prebuilt import create_react_agent
 
 from backend.llm.llm_instance import get_llm_instance
 from backend.llm.session_history import get_session_history
@@ -14,7 +12,6 @@ from backend.llm.tools import create_analysis_tools
 import yaml
 
 logger = logging.getLogger(__name__)
-langchain.debug = True
 
 
 def load_prompts() -> Dict[str, Any]:
@@ -23,13 +20,14 @@ def load_prompts() -> Dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def _force_final_answer(llm: Any, question: str, intermediate_steps: list) -> str:
+def _force_final_answer_from_messages(llm: Any, question: str, messages: list) -> str:
     key_findings = []
-    for action, observation in intermediate_steps:
-        obs_text = str(observation)
-        if len(obs_text) > 500:
-            obs_text = obs_text[:500] + "..."
-        key_findings.append(obs_text)
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            obs_text = str(msg.content)
+            if len(obs_text) > 500:
+                obs_text = obs_text[:500] + "..."
+            key_findings.append(obs_text)
 
     findings_text = "\n".join(key_findings[-5:]) if key_findings else "No findings available."
 
@@ -43,7 +41,7 @@ def _force_final_answer(llm: Any, question: str, intermediate_steps: list) -> st
         "Keep it professional and concise in Markdown format."
     )
 
-    logger.debug("Agent hit iteration limit — forcing final answer via direct LLM call.")
+    logger.debug("Agent hit iteration limit or returned incomplete result — forcing final answer via direct LLM call.")
     response = llm.invoke([HumanMessage(content=forced_prompt)])
     return response.content
 
@@ -52,7 +50,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
     local_llm = False
-    llm = get_llm_instance(local = local_llm)
+    llm = get_llm_instance(local=local_llm)
 
     tool_context = {
         "filename": chat_store.get("filename", "Unknown"),
@@ -79,35 +77,31 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
         first_run_instructions=first_run_instructions,
     )
 
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessage(content=sys_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{user_input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
+    prompt = SystemMessage(content=sys_prompt)
 
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(
-        agent=agent,
+    agent = create_react_agent(
+        model=llm,
         tools=tools,
-        verbose=True,
-        handle_parsing_errors=True,
-        max_iterations=max_iterations,
-        early_stopping_method="generate",
-        return_intermediate_steps=True,
+        prompt=prompt,
     )
 
     trimmed_history = history.messages[-limit:] if len(history.messages) > limit else history.messages
 
+    user_msg_content = message or "Give me a summary of the data."
+    input_messages = list(trimmed_history) + [HumanMessage(content=user_msg_content)]
+
+    # Map max_iterations to a safe recursion limit (2 steps per react agent loop)
+    recursion_limit = 2 * max_iterations + 2
+
     try:
-        logger.debug("Starting LLM execution (Thinking/Answering phase)...")
-        response = agent_executor.invoke(
-            {
-                "user_input": message or "Give me a summary of the data.",
-                "chat_history": trimmed_history,
-            }
+        logger.debug("Starting LangGraph react agent execution...")
+        result = agent.invoke(
+            {"messages": input_messages},
+            config={"recursion_limit": recursion_limit}
         )
-        output = response["output"]
+
+        final_msg = result["messages"][-1]
+        output = final_msg.content
 
         if "SUMMARY:" in output.upper():
             summary_index = output.upper().find("SUMMARY:")
@@ -115,13 +109,12 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
         else:
             is_incomplete = (
                 not output
-                or "agent stopped" in output.lower()
                 or output.strip().startswith(("I need to", "I should", "Let me", "Now "))
             )
             if is_incomplete:
-                output = _force_final_answer(llm, message, response.get("intermediate_steps", []))
+                output = _force_final_answer_from_messages(llm, user_msg_content, result["messages"])
     except Exception as exc:
-        logger.exception("Error while analyzing the data")
+        logger.exception("Error while analyzing the data via LangGraph react agent")
         output = f"I encountered an error while analyzing the data: {exc}"
 
     if message:

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from backend.main import app, chat_store
 
 
-REFERENCE_FILE = Path(__file__).resolve().parents[1] / "references" / "StudentPerformanceFactors.csv"
+REFERENCE_FILE = Path(__file__).resolve().parents[1] / "test_data" / "StudentPerformanceFactors.csv"
 
 
 @pytest.fixture
