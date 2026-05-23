@@ -161,9 +161,13 @@ def get_description(chat_id: str):
     if chat_id not in chat_store:
         raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
     
+    description = chat_store[chat_id].get("description")
+    if description is None:
+        description = "Dataset description is not available"
+        logger.warning(f"Description not found for chat_id {chat_id}")
     return {
         "chat_id": chat_id,
-        "summary": chat_store[chat_id]["description"]
+        "summary": description
     }
 
 @app.get("/plots/{chat_id}/{plot_index}")               # für einen einzelnen Plot
