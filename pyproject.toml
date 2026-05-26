@@ -6,12 +6,10 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "streamlit",
-    "langchain",
     "requests",
     "langchain-nvidia-ai-endpoints>=1.2.1",
     "dotenv>=0.9.9",
     "python-multipart>=0.0.26",
-    "langchain-community>=0.4.1",
     "matplotlib>=3.10.9",
     "seaborn>=0.13.2",
     "numpy>=2.4.1",
@@ -20,6 +18,7 @@ dependencies = [
     "logging>=0.4.9.6",
     "langchain-ollama>=1.1.0",
     "pytest>=9.0.3",
+    "langgraph",
 ]
 
 [tool.ruff]
@@ -29,3 +28,6 @@ line-length = 88
 dev = [
     "ruff>=0.15.8",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -4,10 +4,8 @@ import os
 from typing import Any, Dict
 
 import pandas as pd
-from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 
-from backend.llm.llm_instance import get_llm_instance
 from backend.llm.plot_agent import get_plot_code
 from backend.llm.sandbox import execute_plot_code
 
@@ -179,56 +177,6 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
             logger.exception(f"Error generating plot: {exc}")
             return f"Error generating plot: {exc}"
 
-    @tool
-    def generate_description(dummy: str = "") -> str:
-        """Generate a natural-language description of the dataset using the LLM."""
-        _record_agent_activity(
-            chat_store,
-            "Invoking `generate_description` with `{'dummy': ''}`",
-            tool_name="generate_description",
-            tool_args={"dummy": dummy},
-        )
-        logger.debug("Agent calling 'generate_description'")
-        filename = context.get("filename", "Unknown")
-        num_rows = df.shape[0]
-        num_cols = df.shape[1]
-        columns_list = list(df.columns)
-        dtypes = df.dtypes.to_dict()
-        missing_count = df.isnull().sum().sum()
-        sample_data = df.head(3).to_string()
-
-        llm = get_llm_instance(local=False)
-        prompt = f"""
-        Write a concise, human-like overview description of this dataset. Make it sound natural and informative, like a data analyst describing the dataset to a colleague.
-
-        Dataset Details:
-        - Filename: {filename}
-        - Size: {num_rows:,} rows, {num_cols} columns
-        - Columns: {', '.join(columns_list)}
-        - Data types: {', '.join([f'{col}: {dtype}' for col, dtype in dtypes.items()])}
-        - Missing values: {missing_count:,} total
-        - Sample data:
-        {sample_data}
-
-        Write 2-3 paragraphs describing what this dataset appears to be about, what kind of analysis it might support, and any notable characteristics. Use natural language, not bullet points.
-        """
-
-        try:
-            response = llm.invoke([HumanMessage(content=prompt)])
-            description = response.content.strip()
-        except Exception as exc:
-            logger.exception(f"LLM description generation failed: {exc}")
-            description = (
-                f"This is a dataset named {filename} with {num_rows:,} rows and {num_cols} columns. "
-                f"It contains data about {', '.join(columns_list[:3])}"
-                f"{' and more' if len(columns_list) > 3 else ''}. "
-                f"The dataset has {missing_count:,} missing values and appears ready for analysis."
-            )
-
-        chat_store["description"] = description
-        logger.debug("Description stored in chat_store")
-        return f"Dataset description generated and stored: {description[:100]}..."
-
     return [
         query_dataframe,
         get_dataframe_info,
@@ -237,5 +185,4 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         get_correlations,
         get_missing_values,
         generate_plot,
-        generate_description,
     ]
