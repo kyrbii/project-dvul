@@ -36,7 +36,7 @@ def _record_agent_activity(
     if tool_name:
         event["tool_name"] = tool_name
     if tool_args is not None:
-        event["tool_args"] = {
+        event[structured_output_model"tool_args"] = {
             key: _truncate_activity_value(value)
             for key, value in tool_args.items()
         }

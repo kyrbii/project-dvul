@@ -51,6 +51,29 @@ export class AppComponent implements OnDestroy {
   tempUploadedFile: File | null = null; // Temporäre CSV-Datei
   tempCsvPreview: CsvPreview | null = null;
   isLoading = false; // Für Ladezustand
+
+  models = [
+      {
+          short_name: "Nemotron 3 120B",
+          long_name: "nvidia/nemotron-3-super-120b-a12b:free",
+          local: false,
+          paid: false
+      },
+      {
+          short_name: "GPT OSS 120B",
+          long_name: "openai/gpt-oss-120b:free",
+          local: false,
+          paid: false
+      },
+      {
+          short_name: "Gemma 4 (Local)",
+          long_name: "gemma4",
+          local: true,
+          paid: false
+      }
+  ];
+  selectedModel = this.models[0].long_name; //Default to first model
+
   private activeThinkingChat: ChatSession | null = null;
   private activeThinkingMessage: ChatMessage | null = null;
   private thinkingIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -239,7 +262,7 @@ export class AppComponent implements OnDestroy {
           this.tempCsvPreview = null;
 
           //Beschreibung wird nach der Antwort aktualisiert.
-          this.callChatApi(message, currentChat);
+          this.callChatApi(message, currentChat, this.selectedModel);
         },
         error: (error) => {
           this.handleApiError(error, currentChat);
@@ -248,17 +271,17 @@ export class AppComponent implements OnDestroy {
       });
     } else if (currentChat.backendChatId) {
       // Normale Nachricht mit existierender Chat-ID
-      this.callChatApi(message, currentChat);
+      this.callChatApi(message, currentChat, this.selectedModel);
     } else {
       // Sollte eigentlich nicht passieren (canSendMessage verhindert das ohne CSV/ID)
       this.isLoading = false;
     }
   }
 
-  private callChatApi(message: string, chat: ChatSession): void {
+  private callChatApi(message: string, chat: ChatSession, modelName: string): void {
     this.startActivityPolling(chat);
 
-    this.chatService.sendMessage(message, chat.backendChatId).subscribe({
+    this.chatService.sendMessage(message, chat.backendChatId, modelName).subscribe({
       next: (response) => {
         this.handleApiResponse(response, chat);
       },

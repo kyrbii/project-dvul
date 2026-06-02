@@ -675,6 +675,29 @@
   align-items: stretch;
 }
 
+.model-select {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(145, 158, 171, 0.32);
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  color: #172b4d;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.model-select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.model-select:focus {
+  border-color: #1d4ed8;
+}
+
 @media (max-width: 1200px) {
   .layout-grid {
     grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(180px, 0.9fr);

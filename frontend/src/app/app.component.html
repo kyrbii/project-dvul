@@ -122,6 +122,16 @@
             </label>
           </div>
           <div class="message-input-row">
+            <select 
+              name="modelSelect"
+              [(ngModel)]="selectedModel" 
+              [disabled]="!selectedChat || isLoading"
+              class="model-select"
+            >
+              <option *ngFor="let model of availableModels" [value]="model.id">
+                {{ model.name }}
+              </option>
+            </select>
             <input
               type="text"
               name="message"

@@ -67,10 +67,11 @@ export class ChatService {
   }
 
   // Chat-Nachricht senden (nach CSV-Upload)
-  sendMessage(message: string, chatId?: string): Observable<ChatResponse> {
+  sendMessage(message: string, chatId?: string, modelName?: string): Observable<ChatResponse> {
     const payload = {
       message,
-      chat_id: chatId
+      chat_id: chatId,
+      model_name: modelName
     };
     return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload)
       .pipe(
