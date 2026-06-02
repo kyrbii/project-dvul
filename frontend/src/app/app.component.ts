@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, ViewChild } from '@angular/core';
 import { BackendPlot, ChatActivityEvent, ChatDescriptionResponse, ChatService, ChatResponse } from './chat.service';
 import { marked } from 'marked';
 
@@ -51,6 +51,7 @@ export class AppComponent implements OnDestroy {
   tempUploadedFile: File | null = null; // Temporäre CSV-Datei
   tempCsvPreview: CsvPreview | null = null;
   isLoading = false; // Für Ladezustand
+  plotViewerIndex: number | null = null;
   private activeThinkingChat: ChatSession | null = null;
   private activeThinkingMessage: ChatMessage | null = null;
   private thinkingIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -95,6 +96,18 @@ export class AppComponent implements OnDestroy {
 
   get selectedPlots(): ChatPlot[] {
     return this.selectedChat?.plots ?? [];
+  }
+
+  get selectedViewerPlot(): ChatPlot | null {
+    if (this.plotViewerIndex === null) {
+      return null;
+    }
+
+    return this.selectedPlots[this.plotViewerIndex] ?? null;
+  }
+
+  get hasMultipleViewerPlots(): boolean {
+    return this.selectedPlots.filter((plot) => plot.available).length > 1;
   }
 
   get canSendMessage(): boolean {
@@ -144,6 +157,7 @@ export class AppComponent implements OnDestroy {
     this.tempUploadedFile = null; // Temporäre Datei zurücksetzen
     this.tempCsvPreview = null;
     this.draftMessage = '';
+    this.closePlotViewer();
   }
 
   selectChat(chat: ChatSession): void {
@@ -151,6 +165,44 @@ export class AppComponent implements OnDestroy {
     this.tempUploadedFile = null; // Temporäre Datei zurücksetzen beim Chat-Wechsel
     this.tempCsvPreview = null;
     this.draftMessage = '';
+    this.closePlotViewer();
+  }
+
+  openPlotViewer(plotIndex: number): void {
+    const plot = this.selectedPlots[plotIndex];
+
+    if (!plot?.available) {
+      return;
+    }
+
+    this.plotViewerIndex = plotIndex;
+  }
+
+  closePlotViewer(): void {
+    this.plotViewerIndex = null;
+  }
+
+  showPreviousPlot(): void {
+    this.showAdjacentPlot(-1);
+  }
+
+  showNextPlot(): void {
+    this.showAdjacentPlot(1);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handlePlotViewerKeydown(event: KeyboardEvent): void {
+    if (!this.selectedViewerPlot) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.closePlotViewer();
+    } else if (event.key === 'ArrowLeft') {
+      this.showPreviousPlot();
+    } else if (event.key === 'ArrowRight') {
+      this.showNextPlot();
+    }
   }
 
   onFileSelected(event: Event): void {
@@ -629,9 +681,31 @@ export class AppComponent implements OnDestroy {
     chat.plots = chat.plots.map((plot) =>
       plot.index === plotIndex ? { ...plot, available: false } : plot
     );
+
+    if (this.selectedViewerPlot?.index === plotIndex) {
+      this.closePlotViewer();
+    }
   }
 
   private buildPlotUrl(chatId: string, plotIndex: number): string {
     return `http://localhost:8000/plots/${chatId}/${plotIndex}`;
+  }
+
+  private showAdjacentPlot(direction: 1 | -1): void {
+    if (this.plotViewerIndex === null || !this.hasMultipleViewerPlots) {
+      return;
+    }
+
+    const plots = this.selectedPlots;
+    let nextIndex = this.plotViewerIndex;
+
+    for (let attempts = 0; attempts < plots.length; attempts++) {
+      nextIndex = (nextIndex + direction + plots.length) % plots.length;
+
+      if (plots[nextIndex]?.available) {
+        this.plotViewerIndex = nextIndex;
+        return;
+      }
+    }
   }
 }

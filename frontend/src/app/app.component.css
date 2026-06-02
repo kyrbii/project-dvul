@@ -533,12 +533,34 @@
   font-size: 0.9rem;
 }
 
+.plot-image-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: inherit;
+  cursor: zoom-in;
+  border-radius: 12px;
+}
+
+.plot-image-button:focus-visible {
+  outline: 3px solid rgba(29, 78, 216, 0.35);
+  outline-offset: 3px;
+}
+
 .plot-image {
   width: 100%;
   height: auto;
   border-radius: 12px;
   background: white;
   border: 1px solid rgba(145, 158, 171, 0.2);
+  display: block;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.plot-image-button:hover .plot-image {
+  box-shadow: 0 12px 28px rgba(23, 43, 77, 0.12);
+  transform: translateY(-1px);
 }
 
 .plot-fallback {
@@ -675,6 +697,104 @@
   align-items: stretch;
 }
 
+.plot-viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  padding: 28px;
+  background: rgba(15, 23, 42, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plot-viewer {
+  width: min(1120px, 100%);
+  height: min(820px, 100%);
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.32);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.plot-viewer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+.plot-viewer-header h2 {
+  margin: 0;
+  color: #172b4d;
+  font-size: 1.1rem;
+}
+
+.plot-viewer-header p {
+  margin: 4px 0 0;
+  color: #5f6c87;
+  font-size: 0.92rem;
+}
+
+.plot-viewer-close,
+.plot-viewer-arrow {
+  border: 0;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #172b4d;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.plot-viewer-close {
+  width: 38px;
+  height: 38px;
+  font-size: 1.55rem;
+}
+
+.plot-viewer-body {
+  flex: 1;
+  min-height: 0;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 14px;
+  background: #f8f9ff;
+}
+
+.plot-viewer-image {
+  width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(145, 158, 171, 0.2);
+}
+
+.plot-viewer-arrow {
+  width: 48px;
+  height: 48px;
+  font-size: 2.1rem;
+}
+
+.plot-viewer-close:hover,
+.plot-viewer-arrow:not(:disabled):hover {
+  background: #dbeafe;
+}
+
+.plot-viewer-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1200px) {
   .layout-grid {
     grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(180px, 0.9fr);
@@ -729,5 +849,30 @@
   .plot-card,
   .message-bubble {
     padding: 12px;
+  }
+
+  .plot-viewer-backdrop {
+    padding: 12px;
+  }
+
+  .plot-viewer {
+    height: min(760px, 100%);
+    border-radius: 14px;
+  }
+
+  .plot-viewer-header {
+    padding: 14px 16px;
+  }
+
+  .plot-viewer-body {
+    padding: 12px;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 8px;
+  }
+
+  .plot-viewer-arrow {
+    width: 38px;
+    height: 38px;
+    font-size: 1.7rem;
   }
 }

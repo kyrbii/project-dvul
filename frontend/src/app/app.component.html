@@ -145,19 +145,26 @@
       </div>
       <div class="panel-body visuals-panel">
         <ng-container *ngIf="selectedPlots.length; else noPlots">
-          <article class="plot-card" *ngFor="let plot of selectedPlots">
+          <article class="plot-card" *ngFor="let plot of selectedPlots; let plotIndex = index">
             <div class="plot-card-header">
               <h3>{{ plot.title }}</h3>
               <span>#{{ plot.index }}</span>
             </div>
 
-            <img
+            <button
               *ngIf="plot.available"
-              [src]="plot.imageUrl"
-              [alt]="plot.title"
-              class="plot-image"
-              (error)="selectedChat && markPlotUnavailable(selectedChat, plot.index)"
-            />
+              type="button"
+              class="plot-image-button"
+              [attr.aria-label]="plot.title + ' groß anzeigen'"
+              (click)="openPlotViewer(plotIndex)"
+            >
+              <img
+                [src]="plot.imageUrl"
+                [alt]="plot.title"
+                class="plot-image"
+                (error)="selectedChat && markPlotUnavailable(selectedChat, plot.index)"
+              />
+            </button>
 
             <div *ngIf="!plot.available" class="plot-fallback">
               <p>Der Plot-Endpunkt ist noch nicht erreichbar.</p>
@@ -174,4 +181,40 @@
       </div>
     </aside>
   </div>
+</div>
+
+<div class="plot-viewer-backdrop" *ngIf="selectedViewerPlot as activePlot" (click)="closePlotViewer()">
+  <section class="plot-viewer" role="dialog" aria-modal="true" [attr.aria-label]="activePlot.title" (click)="$event.stopPropagation()">
+    <header class="plot-viewer-header">
+      <div>
+        <h2>{{ activePlot.title }}</h2>
+        <p>Diagramm #{{ activePlot.index }}</p>
+      </div>
+      <button type="button" class="plot-viewer-close" aria-label="Diagrammansicht schließen" (click)="closePlotViewer()">×</button>
+    </header>
+
+    <div class="plot-viewer-body">
+      <button
+        type="button"
+        class="plot-viewer-arrow previous"
+        aria-label="Vorheriges Diagramm anzeigen"
+        [disabled]="!hasMultipleViewerPlots"
+        (click)="showPreviousPlot()"
+      >
+        ‹
+      </button>
+
+      <img [src]="activePlot.imageUrl" [alt]="activePlot.title" class="plot-viewer-image" />
+
+      <button
+        type="button"
+        class="plot-viewer-arrow next"
+        aria-label="Nächstes Diagramm anzeigen"
+        [disabled]="!hasMultipleViewerPlots"
+        (click)="showNextPlot()"
+      >
+        ›
+      </button>
+    </div>
+  </section>
 </div>
