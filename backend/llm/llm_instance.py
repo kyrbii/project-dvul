@@ -22,7 +22,7 @@ def get_llm_instance(local: bool = False, model_name: str | None = None, api_key
             raise RuntimeError("OLLAMA_MODEL must be set in the environment.")
 
         logger.debug(f"Using local Ollama model: {model}")
-        return ChatOllama(model=model, **kwargs)
+        llm = ChatOllama(model=model, **kwargs)
     else:
         # Remote OpenRouter
         model = model_name or os.getenv("OPENROUTER_MODEL")
@@ -44,10 +44,15 @@ def get_llm_instance(local: bool = False, model_name: str | None = None, api_key
             **kwargs
         )
 
-        if structured_output_model is not None:
+    if structured_output_model is not None:
+        try:
+            # Use JSON mode for maximum compatibility with diverse OpenRouter and OSS models
+            llm = llm.with_structured_output(structured_output_model, method="json_mode")
+        except Exception as e:
+            logger.warning(f"Failed to use json_mode, falling back to default structured output: {e}")
             try:
                 llm = llm.with_structured_output(structured_output_model)
             except AttributeError:
                 logger.warning("LLM instance does not support with_structured_output(); returning raw LLM")
 
-        return llm
+    return llm

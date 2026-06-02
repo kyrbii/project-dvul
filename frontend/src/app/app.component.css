@@ -458,6 +458,10 @@
   color: rgba(23, 43, 77, 0.6);
 }
 
+.message-bubble.user .message-time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .chat-form {
   display: flex;
   flex-direction: column;
@@ -466,6 +470,9 @@
 }
 
 .upload-section {
+  display: flex;
+  gap: 12px;
+  align-items: center;
   margin-bottom: 12px;
 }
 
@@ -484,7 +491,7 @@
 }
 
 .upload-label.full-width {
-  width: 100%;
+  flex: 1;
   justify-content: flex-start;
 }
 
@@ -640,7 +647,7 @@
 }
 
 .message-input {
-  flex: 2;
+  flex: 1;
   min-height: 48px;
   padding: 12px 14px;
   border-radius: 14px;
@@ -649,7 +656,6 @@
 }
 
 .send-button {
-  flex: 1;
   min-height: 48px;
   border: none;
   border-radius: 14px;
@@ -659,6 +665,81 @@
   padding: 0 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.send-button.icon-only {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Spinner for send button loading state */
+.btn-spinner {
+  animation: btnSpinnerRotate 2s linear infinite;
+  width: 20px;
+  height: 20px;
+}
+
+.btn-spinner .path {
+  stroke: #ffffff;
+  stroke-linecap: round;
+  animation: btnSpinnerDash 1.5s ease-in-out infinite;
+}
+
+@keyframes btnSpinnerRotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes btnSpinnerDash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
+
+/* Spinner for model selector loading state */
+.model-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.model-select-loader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(145, 158, 171, 0.32);
+  font-size: 0.9rem;
+  background-color: #f3f4f6;
+  color: #5f6c87;
+  font-weight: 500;
+}
+
+.model-select-loader .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(29, 78, 216, 0.2);
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  animation: btnSpinnerRotate 1s linear infinite;
 }
 
 .send-button:disabled {
@@ -673,6 +754,29 @@
 .right-panel .panel-body {
   justify-content: flex-start;
   align-items: stretch;
+}
+
+.model-select {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(145, 158, 171, 0.32);
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  color: #172b4d;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.model-select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.model-select:focus {
+  border-color: #1d4ed8;
 }
 
 @media (max-width: 1200px) {
@@ -729,5 +833,111 @@
   .plot-card,
   .message-bubble {
     padding: 12px;
+  }
+}
+
+.plot-image.clickable {
+  cursor: zoom-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plot-image.clickable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(23, 43, 77, 0.12);
+}
+
+/* Modal Backdrop Overlay */
+.plot-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.54);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Modal Panel */
+.plot-modal-content {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(9, 30, 66, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.plot-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+.plot-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #172b4d;
+  font-weight: 700;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: #5f6c87;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.close-modal-btn:hover {
+  color: #ef4444;
+}
+
+/* Modal Body */
+.plot-modal-body {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background: #f8f9ff;
+}
+
+.maximized-plot-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(145, 158, 171, 0.16);
+  box-shadow: 0 4px 12px rgba(23, 43, 77, 0.05);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

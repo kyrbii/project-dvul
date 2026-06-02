@@ -22,6 +22,17 @@ export interface BackendPlot {
   svg?: string;
 }
 
+export interface APIModel {
+  short_name: string;
+  long_name: string;
+  local: boolean;
+  paid: boolean;
+}
+
+export interface ModelsResponse {
+  models: APIModel[];
+}
+
 export interface ChatPlotsResponse {
   chat_id: string;
   plots: BackendPlot[];
@@ -67,10 +78,11 @@ export class ChatService {
   }
 
   // Chat-Nachricht senden (nach CSV-Upload)
-  sendMessage(message: string, chatId?: string): Observable<ChatResponse> {
+  sendMessage(message: string, chatId?: string, modelName?: string): Observable<ChatResponse> {
     const payload = {
       message,
-      chat_id: chatId
+      chat_id: chatId,
+      model_name: modelName
     };
     return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload)
       .pipe(
@@ -94,6 +106,13 @@ export class ChatService {
 
   getActivity(chatId: string): Observable<ChatActivityResponse> {
     return this.http.get<ChatActivityResponse>(`${this.apiUrl}/activity/${chatId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getModels(): Observable<ModelsResponse> {
+    return this.http.get<ModelsResponse>(`${this.apiUrl}/models`)
       .pipe(
         catchError(this.handleError)
       );

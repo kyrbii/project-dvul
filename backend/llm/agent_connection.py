@@ -46,11 +46,10 @@ def _force_final_answer_from_messages(llm: Any, question: str, messages: list) -
     return response.content
 
 
-def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_iterations: int = 15):
+def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_iterations: int = 15, model_name : str = None, local : bool = None):
     history = get_session_history(chat_store)
     df = chat_store["dataframe"]
-    local_llm = False
-    llm = get_llm_instance(local=local_llm)
+    llm = get_llm_instance(model_name=model_name, local=local)
 
     tool_context = {
         "filename": chat_store.get("filename", "Unknown"),
@@ -61,7 +60,7 @@ def agent_call(chat_store: Dict[str, Any], message: str, limit: int = 10, max_it
     if "plots" not in chat_store:
         chat_store["plots"] = []
 
-    tools = create_analysis_tools(df, tool_context, chat_store)
+    tools = create_analysis_tools(df, tool_context, chat_store, model_name=model_name, local=local)
     all_prompts = load_prompts()
 
     is_first_run = len(history.messages) == 0
