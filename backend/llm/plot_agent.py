@@ -12,9 +12,9 @@ def load_prompts() -> Dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def get_plot_code(instructions: str, context: Dict[str, Any]) -> PlotCodeOutput:
+def get_plot_code(instructions: str, context: Dict[str, Any], model: str, local: bool) -> PlotCodeOutput:
     """Calls a specialized LLM to generate plotting code based on instructions."""
-    llm = get_llm_instance(structured_output_model=PlotCodeOutput)
+    llm = get_llm_instance(structured_output_model=PlotCodeOutput, model_name=model, local=local)
 
     all_prompts = load_prompts()
     system_msg = SystemMessage(content=all_prompts["agent_prompts"]["plot_agent"])

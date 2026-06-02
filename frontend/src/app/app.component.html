@@ -120,6 +120,23 @@
                 [disabled]="hasCsvInChat"
               />
             </label>
+            <div class="model-select-wrapper">
+              <select 
+                *ngIf="!isModelsLoading"
+                name="modelSelect"
+                [(ngModel)]="selectedModel" 
+                [disabled]="!selectedChat || isLoading"
+                class="model-select"
+              >
+                <option *ngFor="let model of models" [value]="model.long_name">
+                  {{ model.short_name }}{{ model.local ? ' (Local)' : '' }}
+                </option>
+              </select>
+              <div *ngIf="isModelsLoading" class="model-select-loader">
+                <span class="spinner"></span>
+                <span>Models loading...</span>
+              </div>
+            </div>
           </div>
           <div class="message-input-row">
             <input
@@ -130,9 +147,13 @@
               [disabled]="!selectedChat"
               class="message-input"
             />
-            <button type="submit" [disabled]="!canSendMessage || isLoading" class="send-button">
-              <span *ngIf="!isLoading">Senden</span>
-              <span *ngIf="isLoading">Lädt...</span>
+            <button type="submit" [disabled]="!canSendMessage || isLoading" class="send-button icon-only">
+              <svg *ngIf="!isLoading" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+              <svg *ngIf="isLoading" class="btn-spinner" viewBox="0 0 50 50">
+                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+              </svg>
             </button>
           </div>
         </form>
@@ -165,6 +186,12 @@
                 (error)="selectedChat && markPlotUnavailable(selectedChat, plot.index)"
               />
             </button>
+              [src]="plot.imageUrl"
+              [alt]="plot.title"
+              class="plot-image clickable"
+              (click)="maximizePlot(plot)"
+              (error)="selectedChat && markPlotUnavailable(selectedChat, plot.index)"
+            />
 
             <div *ngIf="!plot.available" class="plot-fallback">
               <p>Der Plot-Endpunkt ist noch nicht erreichbar.</p>
@@ -217,4 +244,15 @@
       </button>
     </div>
   </section>
+<!-- Maximized Plot Modal -->
+<div *ngIf="maximizedPlot" class="plot-modal-overlay" (click)="closeMaximizedPlot()">
+  <div class="plot-modal-content" (click)="$event.stopPropagation()">
+    <header class="plot-modal-header">
+      <h3>{{ maximizedPlot.title }}</h3>
+      <button class="close-modal-btn" (click)="closeMaximizedPlot()">&times;</button>
+    </header>
+    <div class="plot-modal-body">
+      <img [src]="maximizedPlot.imageUrl" [alt]="maximizedPlot.title" class="maximized-plot-image" />
+    </div>
+  </div>
 </div>
