@@ -22,6 +22,17 @@ export interface BackendPlot {
   svg?: string;
 }
 
+export interface APIModel {
+  short_name: string;
+  long_name: string;
+  local: boolean;
+  paid: boolean;
+}
+
+export interface ModelsResponse {
+  models: APIModel[];
+}
+
 export interface ChatPlotsResponse {
   chat_id: string;
   plots: BackendPlot[];
@@ -95,6 +106,13 @@ export class ChatService {
 
   getActivity(chatId: string): Observable<ChatActivityResponse> {
     return this.http.get<ChatActivityResponse>(`${this.apiUrl}/activity/${chatId}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getModels(): Observable<ModelsResponse> {
+    return this.http.get<ModelsResponse>(`${this.apiUrl}/models`)
       .pipe(
         catchError(this.handleError)
       );

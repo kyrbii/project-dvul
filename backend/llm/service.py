@@ -1,3 +1,5 @@
+from fastapi.dependencies import models
+from fastapi.dependencies import models
 import logging
 from typing import Any, Dict
 
@@ -11,20 +13,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_llm_response(
-    chat_store: Dict[str, Any], message: str
+    chat_store: Dict[str, Any], message: str, model: str, local: bool
 ) -> models.ChatResponse:
     """Coordinates the agent call and returns only the indices of plots generated in this turn."""
     try:
         # Trigger dataset description concurrently in the background if not already present
         if "description" not in chat_store:
             import threading
-            threading.Thread(target=get_dataset_description, args=(chat_store,)).start()
+            threading.Thread(target=get_dataset_description, args=(chat_store, model, local)).start()
 
         # 1. Track how many plots we have before the call
         initial_plot_count = len(chat_store.get("plots", []))
 
         # 2. Call the agent
-        chat_store, bot_message = agent_call(chat_store, message)
+        chat_store, bot_message = agent_call(chat_store, message, model_name=model, local=local)
 
         # 3. Calculate which plots are new
         current_plot_count = len(chat_store.get("plots", []))
@@ -44,7 +46,7 @@ def get_llm_response(
     )
 
 
-def get_dataset_description(chat_store: Dict[str, Any]) -> str:
+def get_dataset_description(chat_store: Dict[str, Any], model_name: str, local: bool) -> str:
     """Returns the dataset description. Generates it directly via the LLM on-demand
 
     if it's not already cached in the chat_store.
@@ -61,7 +63,7 @@ def get_dataset_description(chat_store: Dict[str, Any]) -> str:
     missing_count = df.isnull().sum().sum()
     sample_data = df.head(3).to_string()
 
-    llm = get_llm_instance(local=False)
+    llm = get_llm_instance(model_name=model_name, local=local)
     prompt = f"""
     Write a concise, human-like overview description of this dataset. Make it sound natural and informative, like a data analyst describing the dataset to a colleague.
 

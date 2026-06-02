@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-import { BackendPlot, ChatActivityEvent, ChatDescriptionResponse, ChatService, ChatResponse } from './chat.service';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { BackendPlot, ChatActivityEvent, ChatDescriptionResponse, ChatService, ChatResponse, APIModel } from './chat.service';
 import { marked } from 'marked';
 
 interface ChatMessage {
@@ -43,7 +43,7 @@ interface ChatSession {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
-export class AppComponent implements OnDestroy {
+export class AppComponent implements OnInit, OnDestroy {
   draftMessage = '';
   selectedChat: ChatSession | null = null;
   chats: ChatSession[] = [];
@@ -52,27 +52,10 @@ export class AppComponent implements OnDestroy {
   tempCsvPreview: CsvPreview | null = null;
   isLoading = false; // Für Ladezustand
 
-  models = [
-      {
-          short_name: "Nemotron 3 120B",
-          long_name: "nvidia/nemotron-3-super-120b-a12b:free",
-          local: false,
-          paid: false
-      },
-      {
-          short_name: "GPT OSS 120B",
-          long_name: "openai/gpt-oss-120b:free",
-          local: false,
-          paid: false
-      },
-      {
-          short_name: "Gemma 4 (Local)",
-          long_name: "gemma4",
-          local: true,
-          paid: false
-      }
-  ];
-  selectedModel = this.models[0].long_name; //Default to first model
+  models: APIModel[] = [];
+  selectedModel = '';
+  isModelsLoading = false;
+  maximizedPlot: ChatPlot | null = null;
 
   private activeThinkingChat: ChatSession | null = null;
   private activeThinkingMessage: ChatMessage | null = null;
@@ -96,6 +79,38 @@ export class AppComponent implements OnDestroy {
 
     // Automatisch ersten Chat erstellen
     this.createNewChat();
+  }
+
+  ngOnInit(): void {
+    this.loadModels();
+  }
+
+  loadModels(): void {
+    this.isModelsLoading = true;
+    this.chatService.getModels().subscribe({
+      next: (response) => {
+        this.models = response.models || [];
+        if (this.models.length > 0) {
+          this.selectedModel = this.models[0].long_name;
+        }
+        this.isModelsLoading = false;
+        this.refreshView();
+      },
+      error: (error) => {
+        console.error('Failed to load active models from backend', error);
+        this.models = [
+          {
+            short_name: "Standard-Modell",
+            long_name: "default",
+            local: false,
+            paid: false
+          }
+        ];
+        this.selectedModel = "default";
+        this.isModelsLoading = false;
+        this.refreshView();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -224,12 +239,10 @@ export class AppComponent implements OnDestroy {
 
     // User-Nachricht im Chat anzeigen
     let userContent = '';
-    if (hasCsv && hasText) {
-      userContent = `CSV: ${uploadedFile!.name}\n${message}`;
-    } else if (hasCsv) {
-      userContent = `CSV: ${uploadedFile!.name}`;
-    } else {
+    if (hasText) {
       userContent = message;
+    } else if (hasCsv) {
+      userContent = `Datei hochgeladen: ${uploadedFile!.name}`;
     }
 
     currentChat.messages.push({
@@ -315,16 +328,16 @@ export class AppComponent implements OnDestroy {
 
     this.thinkingSteps = includesCsv
       ? [
-          'CSV wird hochgeladen und vorbereitet',
-          'Spalten und Datentypen werden geprüft',
-          'Auffälligkeiten und erste Muster werden gesucht',
-          'Antwort wird formuliert',
-        ]
+        'CSV wird hochgeladen und vorbereitet',
+        'Spalten und Datentypen werden geprüft',
+        'Auffälligkeiten und erste Muster werden gesucht',
+        'Antwort wird formuliert',
+      ]
       : [
-          'Frage wird eingeordnet',
-          'Passende Informationen aus dem Datensatz werden gesucht',
-          'Antwort wird formuliert',
-        ];
+        'Frage wird eingeordnet',
+        'Passende Informationen aus dem Datensatz werden gesucht',
+        'Antwort wird formuliert',
+      ];
     this.thinkingStepIndex = 0;
 
     const thinkingMessage: ChatMessage = {
@@ -652,6 +665,16 @@ export class AppComponent implements OnDestroy {
     chat.plots = chat.plots.map((plot) =>
       plot.index === plotIndex ? { ...plot, available: false } : plot
     );
+  }
+
+  maximizePlot(plot: ChatPlot): void {
+    this.maximizedPlot = plot;
+    this.refreshView();
+  }
+
+  closeMaximizedPlot(): void {
+    this.maximizedPlot = null;
+    this.refreshView();
   }
 
   private buildPlotUrl(chatId: string, plotIndex: number): string {

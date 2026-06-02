@@ -36,7 +36,7 @@ def _record_agent_activity(
     if tool_name:
         event["tool_name"] = tool_name
     if tool_args is not None:
-        event[structured_output_model"tool_args"] = {
+        event["tool_args"] = {
             key: _truncate_activity_value(value)
             for key, value in tool_args.items()
         }
@@ -56,7 +56,7 @@ def _save_debug_plot(svg_data: str, title: str, plot_index: int) -> None:
         logger.exception(f"Failed to save debug plot: {exc}")
 
 
-def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store: Dict[str, Any]):
+def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store: Dict[str, Any], model_name: str, local: bool):
     """Factory for tools that operate on a specific dataframe and chat context."""
 
     @tool
@@ -156,7 +156,7 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         )
         logger.debug("Agent requested plot: %s", instructions)
         try:
-            plot_data = get_plot_code(instructions, context)
+            plot_data = get_plot_code(instructions, context, model=model_name, local=local)
             svg_data = execute_plot_code(plot_data.code, df)
 
             if svg_data.startswith("Sandbox Error"):

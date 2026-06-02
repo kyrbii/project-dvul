@@ -1,3 +1,4 @@
+from fastapi import requests
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
@@ -8,6 +9,9 @@ from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
 from models.model_selection import get_working_models
 import csv
+import os
+import threading
+import asyncio
 import dotenv
 
 dotenv.load_dotenv()
@@ -27,6 +31,27 @@ app.add_middleware(
 )
 chat_counter = count(1)
 chat_store = {}
+model_store = []
+is_startup_evaluated = False
+
+def run_startup_evaluation():
+    global model_store, is_startup_evaluated
+    logger.info("Evaluating working models at startup in background...")
+    try:
+        working = get_working_models()
+        if working:
+            model_store = working
+            logger.info(f"Loaded active models: {[m.short_name for m in model_store]}")
+        else:
+            logger.warning("No working models found during startup evaluation.")
+    except Exception as e:
+        logger.exception("Failed to evaluate models at startup")
+    finally:
+        is_startup_evaluated = True
+
+@app.on_event("startup")
+def startup_event():
+    threading.Thread(target=run_startup_evaluation, daemon=True).start()
 
 MAX_ACTIVITY_EVENTS = 50
 
@@ -85,10 +110,22 @@ def chat(request: ChatRequest):
 
     chat_store[request.chat_id]["activity"] = []
     add_activity_event(request.chat_id, "Analyse wird gestartet", "agent")
-    
+    model_name = request.model_name
+    local = None
+    default = True
+    for model in model_store:
+        if model.long_name == model_name:
+            local = model.local 
+            default = False
+            break
+    if default:
+        model_name = "nvidia/nemotron-3-super-120b-a12b:free"
+        local = False
     chat_store[request.chat_id], response = get_llm_response(
         chat_store[request.chat_id],
-        message=request.message
+        message=request.message,
+        model=model_name,
+        local=local
     )
     add_activity_event(request.chat_id, "Antwort wurde erstellt", "agent")
     
@@ -197,14 +234,16 @@ def get_plots(chat_id: str):
 
 
 @app.get("/models")
-def get_active_models():
+async def get_active_models():
     """
-    Returns the list of active/working models.
+    Returns the list of active/working models. Waits until evaluation completes.
     """
-    try:
-        working = get_working_models()
-        return {"models": working}
-    except Exception as e:
-        logger.exception("Failed to retrieve working models")
-        raise HTTPException(status_code=500, detail=str(e))
+    global is_startup_evaluated, model_store
+    
+    # Wait up to 15 seconds (30 * 0.5s) for the background check to complete
+    for _ in range(30):
+        if is_startup_evaluated:
+            break
+        await asyncio.sleep(0.5)
+    return {"models": model_store}
 
