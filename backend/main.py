@@ -1,4 +1,3 @@
-from fastapi import requests
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from itertools import count
@@ -9,7 +8,6 @@ from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
 from models.model_selection import get_working_models
 import csv
-import os
 import threading
 import asyncio
 import dotenv
@@ -45,7 +43,7 @@ def run_startup_evaluation():
         else:
             logger.warning("No working models found during startup evaluation.")
     except Exception as e:
-        logger.exception("Failed to evaluate models at startup")
+        logger.exception("Failed to evaluate models at startup", e)
     finally:
         is_startup_evaluated = True
 
