@@ -27,6 +27,9 @@ line-length = 88
 [dependency-groups]
 dev = [
     "ruff>=0.15.8",
+    "pytest",
+    "pytest-mock",
+    "httpx"
 ]
 
 [tool.pytest.ini_options]
