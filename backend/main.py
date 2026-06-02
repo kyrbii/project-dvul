@@ -6,6 +6,7 @@ import pandas as pd
 from backend.llm.service import get_llm_response
 from backend.logging_config import setup_logging, get_backend_logger
 from models.messages import ChatRequest
+from models.model_selection import get_working_models
 import csv
 import dotenv
 
@@ -193,3 +194,17 @@ def get_plots(chat_id: str):
         "chat_id": chat_id,
         "plots": chat_store[chat_id].get("plots", [])
     }
+
+
+@app.get("/models")
+def get_active_models():
+    """
+    Returns the list of active/working models.
+    """
+    try:
+        working = get_working_models()
+        return {"models": working}
+    except Exception as e:
+        logger.exception("Failed to retrieve working models")
+        raise HTTPException(status_code=500, detail=str(e))
+

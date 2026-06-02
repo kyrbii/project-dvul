@@ -8,6 +8,13 @@ from pydantic import BaseModel, Field
 T = TypeVar("T", bound=BaseModel)
 
 # ToDo: Change to user_message -> change BE code
+
+class APIModels(BaseModel):
+    short_name: str = Field(description="Short name of the model")
+    long_name: str = Field(description="Long name of the model")
+    local: bool = Field(description="Whether the model is local")
+    paid: bool = Field(description="Whether the model is paid")
+
 class ChatRequest(BaseModel):
     message: str = Field(description="User message to be displayed in chat and be processed by the LLM")
     chat_id: str | None = None
