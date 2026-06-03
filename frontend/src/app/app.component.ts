@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { BackendPlot, ChatActivityEvent, ChatDescriptionResponse, ChatService, ChatResponse, APIModel } from './chat.service';
 import { marked } from 'marked';
 
@@ -675,6 +675,42 @@ export class AppComponent implements OnInit, OnDestroy {
   closeMaximizedPlot(): void {
     this.maximizedPlot = null;
     this.refreshView();
+  }
+
+  previousPlot(): void {
+    if (!this.maximizedPlot || !this.selectedPlots.length) return;
+    const currentIndex = this.selectedPlots.findIndex(p => p.index === this.maximizedPlot?.index);
+    if (currentIndex > 0) {
+      this.maximizedPlot = this.selectedPlots[currentIndex - 1];
+    } else {
+      this.maximizedPlot = this.selectedPlots[this.selectedPlots.length - 1];
+    }
+    this.refreshView();
+  }
+
+  nextPlot(): void {
+    if (!this.maximizedPlot || !this.selectedPlots.length) return;
+    const currentIndex = this.selectedPlots.findIndex(p => p.index === this.maximizedPlot?.index);
+    if (currentIndex < this.selectedPlots.length - 1) {
+      this.maximizedPlot = this.selectedPlots[currentIndex + 1];
+    } else {
+      this.maximizedPlot = this.selectedPlots[0];
+    }
+    this.refreshView();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent): void {
+    if (!this.maximizedPlot) {
+      return;
+    }
+    if (event.key === 'ArrowLeft') {
+      this.previousPlot();
+    } else if (event.key === 'ArrowRight') {
+      this.nextPlot();
+    } else if (event.key === 'Escape') {
+      this.closeMaximizedPlot();
+    }
   }
 
   private buildPlotUrl(chatId: string, plotIndex: number): string {

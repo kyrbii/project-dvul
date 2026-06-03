@@ -941,3 +941,59 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* Modal Navigation Buttons */
+.modal-nav-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+  z-index: 10001;
+  padding: 0;
+  outline: none;
+}
+
+.modal-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.modal-nav-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.modal-nav-btn.prev {
+  left: 40px;
+}
+
+.modal-nav-btn.next {
+  right: 40px;
+}
+
+/* Adjust layout on small screens so they don't cover the image or get cut off */
+@media (max-width: 950px) {
+  .modal-nav-btn {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .modal-nav-btn.prev {
+    left: 15px;
+  }
+  .modal-nav-btn.next {
+    right: 15px;
+  }
+}
