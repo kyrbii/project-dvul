@@ -45,7 +45,7 @@ def check_model_availability(model: APIModels, timeout: float = 4.0) -> bool:
         return False
 
 
-def get_working_models(timeout: float = 8.0) -> List[APIModels]:
+def get_working_models(timeout: float = 4.0) -> List[APIModels]:
     """Checks all defined models in parallel and returns only the ones that are working."""
     with ThreadPoolExecutor(max_workers=len(models)) as executor:
         results = executor.map(lambda m: check_model_availability(m, timeout), models)

@@ -90,9 +90,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.chatService.getModels().subscribe({
       next: (response) => {
         this.models = response.models || [];
-        if (this.models.length > 0) {
-          this.selectedModel = this.models[0].long_name;
+        if (this.models.length === 0) {
+          this.models = [
+            {
+              short_name: "Default Model",
+              long_name: "default",
+              local: false,
+              paid: false
+            }
+          ];
         }
+        this.selectedModel = this.models[0].long_name;
         this.isModelsLoading = false;
         this.refreshView();
       },
@@ -100,7 +108,7 @@ export class AppComponent implements OnInit, OnDestroy {
         console.error('Failed to load active models from backend', error);
         this.models = [
           {
-            short_name: "Standard-Modell",
+            short_name: "Default Model",
             long_name: "default",
             local: false,
             paid: false
