@@ -4,6 +4,10 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - PLOT_SANDBOX_IMAGE=project_dvul_plot_sandbox:latest
 
   frontend:
     image: ghcr.io/kyrbii/project-dvul-frontend:latest

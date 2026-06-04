@@ -13,8 +13,12 @@ agent_prompts:
     - If correcting code that failed, analyze the provided error message/traceback and fix the specific issue (e.g., column names, index errors, or incompatible API calls).
     
     ### RESPONSE STRUCTURE
-    - title: A descriptive title.
-    - code: The executable Python code.
+    Return EXACTLY one valid JSON object with these fields:
+    {
+      "title": "A short descriptive title",
+      "code": "Python code using df and plt to draw the plot"
+    }
+    Do not include anything else: no markdown, no explanations, no extra keys, and no surrounding text.
 
   analyst_agent: |
     You are a Senior Data Analyst. You communicate ONLY via tool calls or a final markdown summary.
