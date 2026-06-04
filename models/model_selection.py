@@ -1,6 +1,8 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
+import os
+import requests
 
 from models.messages import APIModels
 
@@ -27,9 +29,6 @@ models = [
     )
 ]
 
-
-import os
-import requests
 
 
 def check_local_ollama(model_name: str, host: str = "http://localhost:11434", timeout: float = 1.0) -> bool:

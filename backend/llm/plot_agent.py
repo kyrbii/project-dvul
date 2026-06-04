@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any, List, TypedDict
 import yaml
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from backend.llm.llm_instance import get_llm_instance

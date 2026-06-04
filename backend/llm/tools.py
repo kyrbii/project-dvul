@@ -7,7 +7,6 @@ import pandas as pd
 from langchain_core.tools import tool
 
 from backend.llm.plot_agent import get_plot_code
-from backend.llm.sandbox import execute_plot_code
 
 logger = logging.getLogger(__name__)
 
