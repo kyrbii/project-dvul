@@ -4,6 +4,7 @@ import ast
 import tempfile
 import subprocess
 import sys
+import shutil
 
 import pandas as pd
 
@@ -14,6 +15,17 @@ DEFAULT_SANDBOX_IMAGE = os.environ.get(
 )
 DEFAULT_DOCKER_BINARY = os.environ.get("PLOT_SANDBOX_DOCKER_BIN", "docker")
 DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("PLOT_SANDBOX_TIMEOUT_SECS", "10"))
+
+
+def find_docker_binary() -> str | None:
+    if os.path.isabs(DEFAULT_DOCKER_BINARY) and os.path.exists(DEFAULT_DOCKER_BINARY):
+        return DEFAULT_DOCKER_BINARY
+    if shutil.which(DEFAULT_DOCKER_BINARY):
+        return DEFAULT_DOCKER_BINARY
+    for candidate in ["/usr/bin/docker", "/bin/docker", "/usr/local/bin/docker"]:
+        if os.path.exists(candidate):
+            return candidate
+    return None
 
 
 def execute_plot_code(code: str, df: pd.DataFrame) -> str:
@@ -41,6 +53,13 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
     except Exception as e:
         return f"Sandbox Error: invalid code ({e})"
 
+    docker_bin = find_docker_binary()
+    if not docker_bin:
+        return (
+            "Sandbox Error: docker executable not found. "
+            "Install Docker in the backend image or set PLOT_SANDBOX_DOCKER_BIN."
+        )
+
     with tempfile.TemporaryDirectory() as td:
         code_file = os.path.join(td, "code.py")
         csv_file = os.path.join(td, "data.csv")
@@ -49,7 +68,7 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
         df.to_csv(csv_file, index=False)
 
         docker_cmd = [
-            DEFAULT_DOCKER_BINARY,
+            docker_bin,
             "run",
             "--rm",
             "--network",
@@ -84,9 +103,12 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
             if proc.returncode == 0:
                 return proc.stdout
             stderr = proc.stderr.strip()
+            if "permission denied" in stderr.lower():
+                return (
+                    "Sandbox Error: Docker permission denied. "
+                    "Ensure /var/run/docker.sock is mounted into the backend container and accessible."
+                )
             return f"Sandbox Error: runner failed (code {proc.returncode}): {stderr}"
-        except FileNotFoundError:
-            return "Sandbox Error: docker executable not found. Install Docker or set PLOT_SANDBOX_DOCKER_BIN."
         except subprocess.TimeoutExpired:
             return "Sandbox Error: execution timed out"
         except Exception as e:
