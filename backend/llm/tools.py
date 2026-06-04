@@ -7,7 +7,6 @@ import pandas as pd
 from langchain_core.tools import tool
 
 from backend.llm.plot_agent import get_plot_code
-from backend.llm.sandbox import execute_plot_code
 
 logger = logging.getLogger(__name__)
 
@@ -146,36 +145,78 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         return str(missing[missing > 0]) if missing.any() else "No missing values detected."
 
     @tool
-    def generate_plot(instructions: str) -> str:
-        """Generate a plot from natural language instructions and store it in the chat session."""
+    def generate_plot(instructions: str, plot_index: int | None = None) -> str:
+        """Generate a plot from natural language instructions and store it in the chat session.
+        If you want to modify or improve an existing plot, provide its 1-based plot_index (e.g., plot_index=1).
+        """
         _record_agent_activity(
             chat_store,
-            f"Invoking `generate_plot` with `{{'instructions': '{_truncate_activity_value(instructions)}'}}`",
+            f"Invoking `generate_plot` with `{{'instructions': '{_truncate_activity_value(instructions)}', 'plot_index': {plot_index}}}`",
             tool_name="generate_plot",
-            tool_args={"instructions": instructions},
+            tool_args={"instructions": instructions, "plot_index": plot_index},
         )
-        logger.debug("Agent requested plot: %s", instructions)
-        try:
-            plot_data = get_plot_code(instructions, context, model=model_name, local=local)
-            svg_data = execute_plot_code(plot_data.code, df)
+        logger.debug("Agent requested plot: %s (refinement index: %s)", instructions, plot_index)
+        
+        # Local copy of context to avoid polluting shared context dict
+        local_context = context.copy()
+        
+        if plot_index is not None:
+            plots = chat_store.get("plots", [])
+            if 1 <= plot_index <= len(plots):
+                prev_plot = plots[plot_index - 1]
+                local_context["previous_code"] = prev_plot.get("code")
+            else:
+                return f"Error: Plot index #{plot_index} not found. Available plots: {len(plots)}."
 
-            if svg_data.startswith("Sandbox Error"):
-                return svg_data
+        try:
+            plot_data = get_plot_code(instructions, local_context, model=model_name, local=local, df=df)
+            
+            if plot_data.error:
+                return f"Error generating plot: {plot_data.error}"
 
             if "plots" not in chat_store:
                 chat_store["plots"] = []
 
-            plot_entry = {"title": plot_data.title, "svg": svg_data}
-            chat_store["plots"].append(plot_entry)
-            plot_index = len(chat_store["plots"])
+            plot_entry = {
+                "title": plot_data.title, 
+                "svg": plot_data.svg,
+                "code": plot_data.code
+            }
+            
+            if plot_index is not None:
+                chat_store["plots"][plot_index - 1] = plot_entry
+                target_index = plot_index
+            else:
+                chat_store["plots"].append(plot_entry)
+                target_index = len(chat_store["plots"])
 
-            _save_debug_plot(svg_data, plot_data.title, plot_index)
+            _save_debug_plot(plot_data.svg, plot_data.title, target_index)
 
-            logger.debug("Plot #%d (%s) generated and stored.", plot_index, plot_data.title)
-            return f"Plot successfully generated and stored as Plot #{plot_index}: '{plot_data.title}'"
+            logger.debug("Plot #%d (%s) generated/updated and stored.", target_index, plot_data.title)
+            return f"Plot successfully generated and stored as Plot #{target_index}: '{plot_data.title}'"
         except Exception as exc:
             logger.exception(f"Error generating plot: {exc}")
             return f"Error generating plot: {exc}"
+
+    @tool
+    def get_generated_plots(dummy: str = "") -> str:
+        """Return a list of all plots currently generated in this session, including their index, title, and code.
+        Use this to check which plots exist or to find the code/index of a plot you want to modify.
+        """
+        _record_agent_activity(
+            chat_store,
+            "Invoking `get_generated_plots`",
+            tool_name="get_generated_plots",
+            tool_args={},
+        )
+        plots = chat_store.get("plots", [])
+        if not plots:
+            return "No plots have been generated yet."
+        
+        result = []
+        for i, plot in enumerate(plots, 1):
+            result.append(f"Plot #{i}: '{plot.get('title', 'Untitled')}'\nCode:\n{plot.get('code', 'No code found')}\n")
+        return "\n---\n".join(result)
 
     return [
         query_dataframe,
@@ -185,4 +226,5 @@ def create_analysis_tools(df: pd.DataFrame, context: Dict[str, Any], chat_store:
         get_correlations,
         get_missing_values,
         generate_plot,
+        get_generated_plots,
     ]

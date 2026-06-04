@@ -56,6 +56,16 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedModel = '';
   isModelsLoading = false;
   maximizedPlot: ChatPlot | null = null;
+  zoomScale = 1.0;
+  panX = 0;
+  panY = 0;
+  isDragging = false;
+  private startX = 0;
+  private startY = 0;
+
+  get zoomPercent(): number {
+    return Math.round(this.zoomScale * 100);
+  }
 
   private activeThinkingChat: ChatSession | null = null;
   private activeThinkingMessage: ChatMessage | null = null;
@@ -677,12 +687,60 @@ export class AppComponent implements OnInit, OnDestroy {
 
   maximizePlot(plot: ChatPlot): void {
     this.maximizedPlot = plot;
+    this.resetZoom();
     this.refreshView();
   }
 
   closeMaximizedPlot(): void {
     this.maximizedPlot = null;
+    this.resetZoom();
     this.refreshView();
+  }
+
+  zoomIn(): void {
+    this.zoomScale = Math.min(this.zoomScale + 0.25, 5.0);
+    this.refreshView();
+  }
+
+  zoomOut(): void {
+    this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
+    this.refreshView();
+  }
+
+  resetZoom(): void {
+    this.zoomScale = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+    this.refreshView();
+  }
+
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const zoomIntensity = 0.1;
+    const delta = event.deltaY < 0 ? 1 : -1;
+    this.zoomScale += delta * zoomIntensity;
+    this.zoomScale = Math.min(Math.max(0.5, this.zoomScale), 5.0);
+    this.refreshView();
+  }
+
+  onMouseDown(event: MouseEvent): void {
+    // Left-click only for drag
+    if (event.button !== 0) return;
+    this.isDragging = true;
+    this.startX = event.clientX - this.panX;
+    this.startY = event.clientY - this.panY;
+    event.preventDefault();
+  }
+
+  onMouseMove(event: MouseEvent): void {
+    if (!this.isDragging) return;
+    this.panX = event.clientX - this.startX;
+    this.panY = event.clientY - this.startY;
+    this.refreshView();
+  }
+
+  onMouseUp(): void {
+    this.isDragging = false;
   }
 
   previousPlot(): void {
@@ -693,6 +751,7 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       this.maximizedPlot = this.selectedPlots[this.selectedPlots.length - 1];
     }
+    this.resetZoom();
     this.refreshView();
   }
 
@@ -704,6 +763,7 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       this.maximizedPlot = this.selectedPlots[0];
     }
+    this.resetZoom();
     this.refreshView();
   }
 

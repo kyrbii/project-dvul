@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any, Dict
 
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
@@ -9,15 +8,9 @@ from backend.llm.llm_instance import get_llm_instance
 from backend.llm.session_history import get_session_history
 from backend.llm.tools import create_analysis_tools
 
-import yaml
+from backend.llm.plot_agent import load_prompts
 
 logger = logging.getLogger(__name__)
-
-
-def load_prompts() -> Dict[str, Any]:
-    path = os.path.join(os.path.dirname(__file__), "prompts.yaml")
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
 
 
 def _force_final_answer_from_messages(llm: Any, question: str, messages: list) -> str:
