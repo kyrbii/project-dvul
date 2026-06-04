@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from backend.main import app, chat_store
 
 
-REFERENCE_FILE = Path(__file__).resolve().parents[1] / "test_data" / "StudentPerformanceFactors.csv"
+REFERENCE_FILE = Path(__file__).resolve().parents[2] / "test_data" / "StudentPerformanceFactors.csv"
 
 
 @pytest.fixture
@@ -63,8 +63,10 @@ def test_chat_request(client, uploaded_chat_id):
 
     data = response.json()
     assert "response" in data
-    assert isinstance(data["response"], str)
-    assert data["response"].strip(), "Chat response is empty"
+    assert isinstance(data["response"], dict)
+    assert "bot_message" in data["response"]
+    assert "plot_reference" in data["response"]
+    assert data["response"]["bot_message"].strip(), "Chat response is empty"
 
 
 def test_plot_generation(client, uploaded_chat_id):
