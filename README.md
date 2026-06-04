@@ -56,3 +56,14 @@ The easiest way to run the application securely is by using Docker Compose. Make
 ```bash
 sudo docker compose -f docker-compose.prod.yml up
 ```
+
+### Plot sandbox container
+The plot sandbox runs each generated plot execution in a one-shot container. Build the sandbox image once and let the backend invoke it on demand:
+
+```bash
+docker build -f Dockerfile.sandbox -t project_dvul_plot_sandbox:latest .
+```
+
+The backend uses the image name from `PLOT_SANDBOX_IMAGE`, defaulting to `project_dvul_plot_sandbox:latest`.
+
+If the backend itself runs inside Docker with `docker-compose`, the backend container must be able to access the Docker daemon (for example by mounting `/var/run/docker.sock`).

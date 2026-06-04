@@ -1,28 +1,26 @@
-import io
 import logging
-import matplotlib
-matplotlib.use('agg')
+import os
+import ast
+import tempfile
+import subprocess
+import sys
 
-import matplotlib.pyplot as plt
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SANDBOX_IMAGE = os.environ.get(
+    "PLOT_SANDBOX_IMAGE", "project_dvul_plot_sandbox:latest"
+)
+DEFAULT_DOCKER_BINARY = os.environ.get("PLOT_SANDBOX_DOCKER_BIN", "docker")
+DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("PLOT_SANDBOX_TIMEOUT_SECS", "10"))
+
+
 def execute_plot_code(code: str, df: pd.DataFrame) -> str:
     """
-    Executes matplotlib code in a hardened in-memory environment.
+    Executes matplotlib code in a hardened sandbox container.
     Returns the SVG string of the generated plot.
     """
-    # We'll run the code in a separate, hardened process (sandbox_runner.py)
-    import subprocess
-    import tempfile
-    import textwrap
-    import sys
-    import ast
-    import os
-    import seaborn as sns
-    import numpy as np
-
     # Clean code (remove markdown fences if present)
     code = code.strip()
     if code.startswith("```"):
@@ -32,7 +30,7 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
         else:
             code = code.replace("```python", "").replace("```", "").strip()
 
-    # Quick AST check here before launching subprocess
+    # Quick AST check before launching the sandbox container
     try:
         tree = ast.parse(code)
         for node in ast.walk(tree):
@@ -43,31 +41,54 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
     except Exception as e:
         return f"Sandbox Error: invalid code ({e})"
 
-    runner_path = os.path.join(os.path.dirname(__file__), 'sandbox_runner.py')
-
-    # Write code and dataframe to temp files and invoke runner
     with tempfile.TemporaryDirectory() as td:
-        code_file = os.path.join(td, 'code.py')
-        csv_file = os.path.join(td, 'data.csv')
-        with open(code_file, 'w', encoding='utf-8') as f:
+        code_file = os.path.join(td, "code.py")
+        csv_file = os.path.join(td, "data.csv")
+        with open(code_file, "w", encoding="utf-8") as f:
             f.write(code)
-        # Write dataframe as CSV to avoid pickling untrusted data
         df.to_csv(csv_file, index=False)
 
+        docker_cmd = [
+            DEFAULT_DOCKER_BINARY,
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            "/tmp:exec",
+            "--pids-limit",
+            "64",
+            "--memory",
+            "300m",
+            "--cpus",
+            "0.25",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges",
+            "-v",
+            f"{td}:/workspace:ro",
+            DEFAULT_SANDBOX_IMAGE,
+            "/workspace/code.py",
+            "/workspace/data.csv",
+        ]
+
         try:
-            proc = subprocess.run([
-                sys.executable, runner_path, code_file, csv_file
-            ], capture_output=True, text=True, timeout=8)
-
+            proc = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_TIMEOUT_SECONDS,
+            )
             if proc.returncode == 0:
-                # stdout contains SVG
                 return proc.stdout
-            else:
-                stderr = proc.stderr.strip()
-                return f"Sandbox Error: runner failed (code {proc.returncode}): {stderr}"
-
+            stderr = proc.stderr.strip()
+            return f"Sandbox Error: runner failed (code {proc.returncode}): {stderr}"
+        except FileNotFoundError:
+            return "Sandbox Error: docker executable not found. Install Docker or set PLOT_SANDBOX_DOCKER_BIN."
         except subprocess.TimeoutExpired:
             return "Sandbox Error: execution timed out"
         except Exception as e:
-            logger.exception("Failed to run sandbox runner")
+            logger.exception("Failed to run sandbox container")
             return f"Sandbox Error: {e}"
