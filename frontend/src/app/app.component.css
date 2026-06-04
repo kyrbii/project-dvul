@@ -863,9 +863,10 @@
 .plot-modal-content {
   background: #ffffff;
   border-radius: 20px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
+  width: 95%;
+  max-width: 1400px;
+  height: 92vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 50px rgba(9, 30, 66, 0.3);
@@ -913,16 +914,76 @@
   justify-content: center;
   overflow: auto;
   background: #f8f9ff;
+  flex: 1;
 }
 
 .maximized-plot-image {
   max-width: 100%;
-  max-height: 70vh;
+  max-height: 82vh;
   object-fit: contain;
   border-radius: 12px;
   background: #ffffff;
   border: 1px solid rgba(145, 158, 171, 0.16);
   box-shadow: 0 4px 12px rgba(23, 43, 77, 0.05);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.maximized-plot-image.zoomable {
+  cursor: grab;
+}
+
+.maximized-plot-image.dragging {
+  cursor: grabbing;
+}
+
+/* Zoom controls in modal header */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+.zoom-btn {
+  background: #ffffff;
+  border: 1px solid rgba(145, 158, 171, 0.24);
+  color: #1e293b;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: #f8fafc;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
+.zoom-btn.reset {
+  width: auto;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.zoom-level {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  min-width: 40px;
+  text-align: center;
+  user-select: none;
 }
 
 /* Animations */

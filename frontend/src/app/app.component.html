@@ -215,10 +215,27 @@
   <div class="plot-modal-content" (click)="$event.stopPropagation()">
     <header class="plot-modal-header">
       <h3>{{ maximizedPlot.title }}</h3>
+      <div class="zoom-controls">
+        <button class="zoom-btn" (click)="zoomOut(); $event.stopPropagation()" title="Zoom Out">−</button>
+        <span class="zoom-level">{{ zoomPercent }}%</span>
+        <button class="zoom-btn" (click)="zoomIn(); $event.stopPropagation()" title="Zoom In">+</button>
+        <button class="zoom-btn reset" (click)="resetZoom(); $event.stopPropagation()" title="Zoom zurücksetzen">Reset</button>
+      </div>
       <button class="close-modal-btn" (click)="closeMaximizedPlot()">&times;</button>
     </header>
-    <div class="plot-modal-body">
-      <img [src]="maximizedPlot.imageUrl" [alt]="maximizedPlot.title" class="maximized-plot-image" />
+    <div class="plot-modal-body" (wheel)="onWheel($event)" style="overflow: hidden; position: relative;">
+      <img
+        [src]="maximizedPlot.imageUrl"
+        [alt]="maximizedPlot.title"
+        class="maximized-plot-image zoomable"
+        [class.dragging]="isDragging"
+        [style.transform]="'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomScale + ')'"
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onMouseMove($event)"
+        (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()"
+        (dblclick)="resetZoom()"
+      />
     </div>
   </div>
 
