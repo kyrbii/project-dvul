@@ -28,21 +28,58 @@ models = [
 ]
 
 
-def check_model_availability(model: APIModels, timeout: float = 4.0) -> bool:
-    """Checks if a given model is available by attempting a lightweight inference call."""
-    from backend.llm.llm_instance import get_llm_instance
-    from langchain_core.messages import HumanMessage
+import os
+import requests
+
+
+def check_local_ollama(model_name: str, host: str = "http://localhost:11434", timeout: float = 1.0) -> bool:
     try:
-        llm = get_llm_instance(
-            local=model.local, 
-            model_name=model.long_name, 
+        response = requests.get(f"{host}/api/tags", timeout=timeout)
+        if response.status_code != 200:
+            return False
+            
+        local_models = [m["name"] for m in response.json().get("models", [])]
+        return any(
+            name == model_name or name.startswith(f"{model_name}:") 
+            for name in local_models
+        )
+    except requests.RequestException:
+        return False
+
+
+def check_openrouter_model(model_name: str, timeout: float = 2.0) -> bool:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return False
+    try:
+        headers = {"Authorization": f"Bearer {api_key}"}
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models", 
+            headers=headers, 
             timeout=timeout
         )
-        llm.invoke([HumanMessage(content="ping")])
-        return True
-    except Exception as e:
-        logger.warning(f"Availability check failed for model {model.short_name}: {e}")
+        if response.status_code != 200:
+            return False
+            
+        available_models = [m["id"] for m in response.json().get("data", [])]
+        return model_name in available_models
+    except requests.RequestException:
         return False
+
+
+def check_model_availability(model: APIModels, timeout: float = 4.0) -> bool:
+    """Checks if a given model is available by querying API endpoints instead of doing generation."""
+    if model.local:
+        ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        is_ok = check_local_ollama(model.long_name, host=ollama_host, timeout=min(2.0, timeout))
+        if not is_ok:
+            logger.warning(f"Local model check failed for {model.short_name}: Ollama offline or model not found.")
+        return is_ok
+    else:
+        is_ok = check_openrouter_model(model.long_name, timeout=timeout)
+        if not is_ok:
+            logger.warning(f"Remote model check failed for {model.short_name}: Model offline or invalid API key.")
+        return is_ok
 
 
 def get_working_models(timeout: float = 4.0) -> List[APIModels]:
