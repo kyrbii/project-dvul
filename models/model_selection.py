@@ -8,12 +8,6 @@ logger = logging.getLogger(__name__)
 
 models = [
     APIModels(
-        short_name="Nemotron 3 120B",
-        long_name="nvidia/nemotron-3-super-120b-a12b:free", 
-        local=False, 
-        paid=False
-    ),
-    APIModels(
         short_name="GPT OSS 120B",
         long_name="openai/gpt-oss-120b:free", 
         local=False, 
@@ -23,6 +17,12 @@ models = [
         short_name="Gemma 4",
         long_name="gemma4", 
         local=True, 
+        paid=False
+    ),
+    APIModels(
+        short_name="Owl Alpha",
+        long_name="openrouter/owl-alpha", 
+        local=False, 
         paid=False
     )
 ]

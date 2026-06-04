@@ -117,7 +117,7 @@ def chat(request: ChatRequest):
             default = False
             break
     if default:
-        model_name = "nvidia/nemotron-3-super-120b-a12b:free"
+        model_name = "openai/gpt-oss-120b:free"
         local = False
     chat_store[request.chat_id], response = get_llm_response(
         chat_store[request.chat_id],
