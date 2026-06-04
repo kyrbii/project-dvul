@@ -13,24 +13,17 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
     Executes matplotlib code in a hardened in-memory environment.
     Returns the SVG string of the generated plot.
     """
-    # 1. Hardened execution environment (No 'os', No 'sys', No 'open')
+    # We'll run the code in a separate, hardened process (sandbox_runner.py)
+    import subprocess
+    import tempfile
+    import textwrap
+    import sys
+    import ast
+    import os
     import seaborn as sns
     import numpy as np
-    local_vars = {
-        "df": df.copy(),
-        "plt": plt,
-        "pd": pd,
-        "sns": sns,
-        "np": np
-    }
-    
-    # 2. Prevent malicious builtins
-    safe_builtins = __builtins__.copy()
-    # Remove dangerous functions if they exist in this environment's builtins
-    for dangerous in ['open', 'eval', 'exec', 'getattr', 'setattr', 'help']:
-        safe_builtins.pop(dangerous, None)
 
-    # Clean code (remove markdown blocks if present)
+    # Clean code (remove markdown fences if present)
     code = code.strip()
     if code.startswith("```"):
         lines = code.splitlines()
@@ -39,24 +32,42 @@ def execute_plot_code(code: str, df: pd.DataFrame) -> str:
         else:
             code = code.replace("```python", "").replace("```", "").strip()
 
+    # Quick AST check here before launching subprocess
     try:
-        plt.close('all')
-        plt.style.use('ggplot')
-        
-        # 3. Execute in restricted scope
-        # We use an empty dict for globals to isolate the execution
-        exec(code, {"__builtins__": safe_builtins}, local_vars)
-        
-        # 4. Capture result as SVG string
-        if plt.get_fignums():
-            img_buffer = io.StringIO()
-            plt.savefig(img_buffer, format='svg', bbox_inches='tight')
-            plt.close('all')
-            return img_buffer.getvalue()
-        
-        return "Error: Code executed but no matplotlib figure was produced."
-            
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                return "Sandbox Error: import statements are not allowed."
+            if isinstance(node, ast.Attribute) and getattr(node, 'attr', '').startswith('__'):
+                return "Sandbox Error: access to dunder attributes is disallowed."
     except Exception as e:
-        logger.exception("Sandbox plot execution error")
-        plt.close('all')
-        return f"Sandbox Error: {str(e)}"
+        return f"Sandbox Error: invalid code ({e})"
+
+    runner_path = os.path.join(os.path.dirname(__file__), 'sandbox_runner.py')
+
+    # Write code and dataframe to temp files and invoke runner
+    with tempfile.TemporaryDirectory() as td:
+        code_file = os.path.join(td, 'code.py')
+        csv_file = os.path.join(td, 'data.csv')
+        with open(code_file, 'w', encoding='utf-8') as f:
+            f.write(code)
+        # Write dataframe as CSV to avoid pickling untrusted data
+        df.to_csv(csv_file, index=False)
+
+        try:
+            proc = subprocess.run([
+                sys.executable, runner_path, code_file, csv_file
+            ], capture_output=True, text=True, timeout=8)
+
+            if proc.returncode == 0:
+                # stdout contains SVG
+                return proc.stdout
+            else:
+                stderr = proc.stderr.strip()
+                return f"Sandbox Error: runner failed (code {proc.returncode}): {stderr}"
+
+        except subprocess.TimeoutExpired:
+            return "Sandbox Error: execution timed out"
+        except Exception as e:
+            logger.exception("Failed to run sandbox runner")
+            return f"Sandbox Error: {e}"
