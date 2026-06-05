@@ -35,6 +35,7 @@ interface ChatSession {
   plots: ChatPlot[];
   messages: ChatMessage[];
   createdAt: string;
+  status?: string;
 }
 
 @Component({
@@ -93,6 +94,120 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadModels();
+    this.loadChats();
+  }
+
+  loadChats(): void {
+    this.chatService.getChats().subscribe({
+      next: (response) => {
+        if (response.chats && response.chats.length > 0) {
+          this.chats = response.chats.map(c => this.mapBackendChatToSession(c));
+          this.selectedChat = this.chats[0];
+
+          if (this.selectedChat.status === 'running') {
+            this.handleRunningChatOnReload(this.selectedChat);
+          }
+        }
+        this.refreshView();
+      },
+      error: (error) => {
+        console.error('Failed to load chats from backend', error);
+      }
+    });
+  }
+
+  private mapBackendChatToSession(backendChat: any): ChatSession {
+    const overview = backendChat.uploaded_filename 
+      ? `Datei: ${backendChat.uploaded_filename}. Aktiver Chat: ${backendChat.name}. Backend-Chat-ID: ${backendChat.chat_id}.`
+      : `Datei: Keine CSV hochgeladen. Aktiver Chat: ${backendChat.name}.`;
+
+    return {
+      id: this.nextChatId++,
+      name: backendChat.name || `Chat ${backendChat.chat_id}`,
+      uploadedFileName: backendChat.uploaded_filename,
+      csvPreview: backendChat.csv_preview,
+      backendChatId: backendChat.chat_id,
+      overview: overview,
+      summary: backendChat.description,
+      renderedSummary: backendChat.description ? this.renderMarkdown(backendChat.description) : undefined,
+      plots: (backendChat.plots || []).map((p: any, idx: number) => ({
+        index: idx + 1,
+        title: p.title || `Plot ${idx + 1}`,
+        imageUrl: this.buildPlotUrl(backendChat.chat_id, idx + 1),
+        available: true
+      })),
+      messages: (backendChat.messages || []).map((m: any) => {
+        const role = m.role || (m.type === 'human' ? 'user' : 'bot');
+        return {
+          role,
+          content: m.content,
+          renderedContent: role === 'bot' ? this.renderMarkdown(m.content) : this.escapeHtml(m.content),
+          timestamp: m.timestamp || this.timeStamp()
+        };
+      }),
+      createdAt: backendChat.created_at || new Date().toLocaleString('de-DE'),
+      status: backendChat.status || 'idle'
+    };
+  }
+
+  handleRunningChatOnReload(chat: ChatSession): void {
+    if (this.isLoading && this.activeThinkingChat === chat) {
+      return;
+    }
+
+    this.isLoading = true;
+
+    let thinkingMsg = chat.messages.find(m => m.isThinking);
+    if (!thinkingMsg) {
+      thinkingMsg = {
+        role: 'bot',
+        content: 'Analyse läuft...',
+        renderedContent: this.escapeHtml('Analyse läuft...'),
+        timestamp: this.timeStamp(),
+        isThinking: true
+      };
+      chat.messages.push(thinkingMsg);
+    }
+
+    this.activeThinkingChat = chat;
+    this.activeThinkingMessage = thinkingMsg;
+    this.startActivityPolling(chat);
+  }
+
+  private onAgentFinishedRunning(chat: ChatSession): void {
+    this.removeThinkingMessage(chat);
+    chat.status = 'idle';
+
+    if (chat.backendChatId) {
+      this.chatService.getChatHistory(chat.backendChatId).subscribe({
+        next: (response) => {
+          if (response.messages) {
+            chat.messages = response.messages.map((m: any) => {
+              const role = m.role || (m.type === 'human' ? 'user' : 'bot');
+              return {
+                role,
+                content: m.content,
+                renderedContent: role === 'bot' ? this.renderMarkdown(m.content) : this.escapeHtml(m.content),
+                timestamp: m.timestamp || this.timeStamp()
+              };
+            });
+            
+            const lastMsg = chat.messages[chat.messages.length - 1];
+            if (lastMsg && lastMsg.role === 'bot') {
+              this.updateDerivedPanels(chat, lastMsg.content);
+              this.refreshDescription(chat, lastMsg.content);
+            }
+          }
+          this.refreshView();
+          this.scrollToBottom();
+        },
+        error: (error) => {
+          console.error('Failed to fetch chat history after completion', error);
+        }
+      });
+
+      this.syncPlots(chat, []);
+    }
   }
 
   loadModels(): void {
@@ -207,6 +322,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.tempUploadedFile = null; // Temporäre Datei zurücksetzen beim Chat-Wechsel
     this.tempCsvPreview = null;
     this.draftMessage = '';
+
+    if (chat.status === 'running') {
+      this.handleRunningChatOnReload(chat);
+    }
   }
 
   onFileSelected(event: Event): void {
@@ -437,6 +556,10 @@ export class AppComponent implements OnInit, OnDestroy {
         const latestEvent = nextEvents[nextEvents.length - 1];
         this.activeActivityIndex = latestEvent.index;
         this.updateThinkingMessageFromActivity(latestEvent);
+
+        if (latestEvent.message === "Antwort wurde erstellt") {
+          this.onAgentFinishedRunning(chat);
+        }
       },
       error: () => {
         // Activity polling is progressive enhancement; the chat response still handles errors.
