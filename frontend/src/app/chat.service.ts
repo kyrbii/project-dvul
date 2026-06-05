@@ -58,6 +58,26 @@ export interface ChatActivityResponse {
   activity: ChatActivityEvent[];
 }
 
+export interface BackendChatSession {
+  chat_id: string;
+  name: string;
+  uploaded_filename: string;
+  description?: string;
+  messages: any[];
+  plots: any[];
+  csv_preview?: {
+    fileName: string;
+    headers: string[];
+    rows: string[][];
+  };
+  created_at: string;
+  status: string;
+}
+
+export interface ChatsListResponse {
+  chats: BackendChatSession[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -113,6 +133,20 @@ export class ChatService {
 
   getModels(): Observable<ModelsResponse> {
     return this.http.get<ModelsResponse>(`${this.apiUrl}/models`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getChats(): Observable<ChatsListResponse> {
+    return this.http.get<ChatsListResponse>(`${this.apiUrl}/chats`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getChatHistory(chatId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/chat/${chatId}/history`)
       .pipe(
         catchError(this.handleError)
       );

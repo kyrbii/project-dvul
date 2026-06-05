@@ -74,3 +74,30 @@ def test_chat_success(mocker):
     )
     assert response.status_code == 200
     assert "response" in response.json()
+
+
+# ── /chats and /chat/{chat_id}/history ──────────────────────
+
+def test_get_chats():
+    response = client.get("/chats")
+    assert response.status_code == 200
+    assert "chats" in response.json()
+
+
+def test_get_chat_history_not_found():
+    response = client.get("/chat/chat_9999/history")
+    assert response.status_code == 404
+
+
+def test_get_chat_history_success():
+    csv_content = b"name,age\nAlice,30"
+    upload = client.post(
+        "/upload-csv",
+        files={"file": ("test.csv", io.BytesIO(csv_content), "text/csv")}
+    )
+    chat_id = upload.json()["chat_id"]
+
+    response = client.get(f"/chat/{chat_id}/history")
+    assert response.status_code == 200
+    assert response.json()["chat_id"] == chat_id
+    assert isinstance(response.json()["messages"], list)

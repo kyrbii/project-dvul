@@ -108,6 +108,8 @@ def chat(request: ChatRequest):
 
     chat_store[request.chat_id]["activity"] = []
     add_activity_event(request.chat_id, "Analyse wird gestartet", "agent")
+    chat_store[request.chat_id]["status"] = "running"
+    
     model_name = request.model_name
     local = None
     default = True
@@ -119,18 +121,25 @@ def chat(request: ChatRequest):
     if default:
         model_name = "openai/gpt-oss-120b:free"
         local = False
-    chat_store[request.chat_id], response = get_llm_response(
-        chat_store[request.chat_id],
-        message=request.message,
-        model=model_name,
-        local=local
-    )
-    add_activity_event(request.chat_id, "Antwort wurde erstellt", "agent")
-    
-    return {
-        "chat_id": request.chat_id,
-        "response": response
-    }
+
+    try:
+        chat_store[request.chat_id], response = get_llm_response(
+            chat_store[request.chat_id],
+            message=request.message,
+            model=model_name,
+            local=local
+        )
+        add_activity_event(request.chat_id, "Antwort wurde erstellt", "agent")
+        return {
+            "chat_id": request.chat_id,
+            "response": response
+        }
+    except Exception as e:
+        add_activity_event(request.chat_id, f"Fehler bei der Analyse: {str(e)}", "agent")
+        add_activity_event(request.chat_id, "Antwort wurde erstellt", "agent")
+        raise e
+    finally:
+        chat_store[request.chat_id]["status"] = "idle"
 
 
 @app.post("/upload-csv")
@@ -163,15 +172,25 @@ async def upload_csv(file: UploadFile = File(...)):
 
     summary = create_dataset_summary(df)
 
-    chat_store[chat_id] = {             # @Korbi du musst dann in der get_llm_repsonse auch die summary miteinbeziehen fürs LLM
+    from datetime import datetime
+    created_at = datetime.now().strftime("%d.%m.%Y, %H:%M")
+    chat_name = file.filename.replace('.csv', '')
+    csv_preview = {
+        "fileName": file.filename,
+        "headers": summary["columns"],
+        "rows": [[str(row.get(col, "")) for col in summary["columns"]] for row in summary["preview"]]
+    }
+    chat_store[chat_id] = {
         "filename": file.filename,
         "dataframe": df,
         "activity": [],
         "_activity_next_index": 1,
-        # "summary": summary,
-        # "messages": [],
-        # "plots": []
-}
+        "messages": [],
+        "plots": [],
+        "created_at": created_at,
+        "name": chat_name,
+        "csv_preview": csv_preview
+    }
     
     preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
     
@@ -244,4 +263,52 @@ async def get_active_models():
             break
         await asyncio.sleep(0.5)
     return {"models": model_store}
+
+
+@app.get("/chats")
+def get_chats():
+    from datetime import datetime
+    chats_list = []
+    for chat_id, chat_data in chat_store.items():
+        messages = chat_data.get("messages", [])
+        plots = []
+        for idx, p in enumerate(chat_data.get("plots", []), 1):
+            plots.append({
+                "title": p.get("title", f"Plot {idx}"),
+                "svg": p.get("svg")
+            })
+            
+        csv_preview = chat_data.get("csv_preview")
+        if not csv_preview and "dataframe" in chat_data:
+            df = chat_data["dataframe"]
+            summary = create_dataset_summary(df)
+            csv_preview = {
+                "fileName": chat_data.get("filename", "dataset.csv"),
+                "headers": summary["columns"],
+                "rows": [[str(row.get(col, "")) for col in summary["columns"]] for row in summary["preview"]]
+            }
+            chat_data["csv_preview"] = csv_preview
+
+        chats_list.append({
+            "chat_id": chat_id,
+            "name": chat_data.get("name", chat_data.get("filename", chat_id).replace('.csv', '')),
+            "uploaded_filename": chat_data.get("filename"),
+            "description": chat_data.get("description"),
+            "messages": messages,
+            "plots": plots,
+            "csv_preview": csv_preview,
+            "created_at": chat_data.get("created_at", datetime.now().strftime("%d.%m.%Y, %H:%M")),
+            "status": chat_data.get("status", "idle")
+        })
+    return {"chats": chats_list}
+
+
+@app.get("/chat/{chat_id}/history")
+def get_chat_history(chat_id: str):
+    if chat_id not in chat_store:
+        raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
+    return {
+        "chat_id": chat_id,
+        "messages": chat_store[chat_id].get("messages", [])
+    }
 
