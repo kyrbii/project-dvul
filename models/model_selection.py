@@ -22,10 +22,22 @@ models = [
         paid=False
     ),
     APIModels(
-        short_name="Owl Alpha",
-        long_name="openrouter/owl-alpha", 
+        short_name="Minimax M3a",
+        long_name="minimax/minimax-m3a", 
         local=False, 
-        paid=False
+        paid=True
+    ),
+    APIModels(
+        short_name="Gemini Flash 3.1 (lite)",
+        long_name="google/gemini-3.1-flash-lite", 
+        local=False, 
+        paid=True
+    ),
+    APIModels(
+        short_name="GPT-5.4 Mini",
+        long_name="openai/gpt-5.4-mini", 
+        local=False, 
+        paid=True
     )
 ]
 

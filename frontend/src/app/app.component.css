@@ -94,11 +94,11 @@
   overflow-wrap: anywhere;
 }
 
-:host ::ng-deep .summary-content > *:first-child {
+:host ::ng-deep .summary-content>*:first-child {
   margin-top: 0;
 }
 
-:host ::ng-deep .summary-content > *:last-child {
+:host ::ng-deep .summary-content>*:last-child {
   margin-bottom: 0;
 }
 
@@ -394,6 +394,7 @@
 }
 
 @keyframes thinkingPulse {
+
   0%,
   80%,
   100% {
@@ -411,11 +412,11 @@
   white-space: pre-wrap;
 }
 
-:host ::ng-deep .message-bubble.bot .message-content > *:first-child {
+:host ::ng-deep .message-bubble.bot .message-content>*:first-child {
   margin-top: 0;
 }
 
-:host ::ng-deep .message-bubble.bot .message-content > *:last-child {
+:host ::ng-deep .message-bubble.bot .message-content>*:last-child {
   margin-bottom: 0;
 }
 
@@ -702,10 +703,12 @@
     stroke-dasharray: 1, 150;
     stroke-dashoffset: 0;
   }
+
   50% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -35;
   }
+
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;
@@ -863,7 +866,7 @@
 .plot-modal-content {
   background: #ffffff;
   border-radius: 20px;
-  width: 95%;
+  width: calc(100% - 160px);
   max-width: 1400px;
   height: 92vh;
   max-height: 92vh;
@@ -873,6 +876,8 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
+  position: relative;
+  z-index: 10000;
 }
 
 /* Modal Header */
@@ -988,8 +993,13 @@
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
@@ -997,6 +1007,7 @@
     opacity: 0;
     transform: scale(0.92) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1005,8 +1016,8 @@
 
 /* Modal Navigation Buttons */
 .modal-nav-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: #1d4ed8;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ffffff;
   width: 56px;
   height: 56px;
@@ -1020,16 +1031,18 @@
   top: 50%;
   transform: translateY(-50%);
   backdrop-filter: blur(8px);
-  z-index: 10001;
+  z-index: 10005;
   padding: 0;
   outline: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .modal-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
-  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(17, 24, 39, 0.98);
+  border-color: rgba(255, 255, 255, 0.3);
   color: #ffffff;
   transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .modal-nav-btn:active {
@@ -1037,24 +1050,50 @@
 }
 
 .modal-nav-btn.prev {
-  left: 40px;
+  left: 24px;
 }
 
 .modal-nav-btn.next {
-  right: 40px;
+  right: 24px;
 }
 
 /* Adjust layout on small screens so they don't cover the image or get cut off */
 @media (max-width: 950px) {
+  .plot-modal-content {
+    width: calc(100% - 120px);
+  }
+
   .modal-nav-btn {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.2);
+    width: 44px;
+    height: 44px;
+    background: rgba(17, 24, 39, 0.85);
   }
+
   .modal-nav-btn.prev {
-    left: 15px;
+    left: 12px;
   }
+
   .modal-nav-btn.next {
-    right: 15px;
+    right: 12px;
+  }
+}
+
+/* Support for very small screen sizes (e.g. mobile) */
+@media (max-width: 600px) {
+  .plot-modal-content {
+    width: calc(100% - 24px);
+  }
+
+  .modal-nav-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .modal-nav-btn.prev {
+    left: 4px;
+  }
+
+  .modal-nav-btn.next {
+    right: 4px;
   }
 }
