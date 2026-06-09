@@ -20,6 +20,10 @@
   align-items: stretch;
 }
 
+.layout-grid.plots-collapsed {
+  grid-template-columns: minmax(220px, 0.78fr) minmax(420px, 2fr);
+}
+
 .panel {
   background: #ffffff;
   border-radius: 18px;
@@ -222,6 +226,42 @@
 .chat-title-row .hint {
   margin: 8px 0 0;
   color: #5f6c87;
+}
+
+.ghost-icon-button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid rgba(145, 158, 171, 0.28);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #3e4c6d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-weight: 700;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ghost-icon-button:hover {
+  background: #eef4ff;
+  border-color: rgba(29, 78, 216, 0.32);
+  color: #1d4ed8;
+  box-shadow: 0 8px 18px rgba(23, 43, 77, 0.08);
+}
+
+.ghost-icon-button:focus-visible {
+  outline: 3px solid rgba(29, 78, 216, 0.24);
+  outline-offset: 2px;
+}
+
+.plots-toggle {
+  flex: 0 0 auto;
+}
+
+.plots-toggle-text {
+  white-space: nowrap;
 }
 
 .csv-preview {
@@ -787,16 +827,57 @@
     grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(180px, 0.9fr);
     gap: 16px;
   }
+
+  .layout-grid.plots-collapsed {
+    grid-template-columns: minmax(180px, 0.78fr) minmax(340px, 1.75fr);
+  }
 }
 
 @media (max-width: 768px) {
   .page-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
     padding: 12px;
   }
 
   .layout-grid {
-    grid-template-columns: minmax(150px, 0.85fr) minmax(220px, 1.1fr) minmax(150px, 0.85fr);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
     gap: 12px;
+    height: auto;
+    min-height: calc(100dvh - 24px);
+  }
+
+  .layout-grid.plots-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .left-top,
+  .left-bottom,
+  .center-panel,
+  .right-panel {
+    grid-column: 1;
+  }
+
+  .center-panel {
+    grid-row: 1;
+    min-height: 72dvh;
+  }
+
+  .left-top {
+    grid-row: 2;
+    min-height: 240px;
+  }
+
+  .left-bottom {
+    grid-row: 3;
+    min-height: 260px;
+  }
+
+  .right-panel {
+    grid-row: 4;
+    min-height: 320px;
   }
 
   .panel-header,
@@ -818,7 +899,7 @@
   }
 
   .chat-title-row {
-    margin-bottom: 0;
+    margin-bottom: 12px;
   }
 
   .csv-preview {
@@ -836,6 +917,25 @@
   .plot-card,
   .message-bubble {
     padding: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .chat-title-row,
+  .upload-section {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .plots-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .model-select-wrapper,
+  .model-select,
+  .model-select-loader {
+    width: 100%;
   }
 }
 

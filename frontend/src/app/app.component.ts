@@ -56,6 +56,7 @@ export class AppComponent implements OnInit, OnDestroy {
   models: APIModel[] = [];
   selectedModel = '';
   isModelsLoading = false;
+  isPlotsPanelOpen = true;
   maximizedPlot: ChatPlot | null = null;
   zoomScale = 1.0;
   panX = 0;
@@ -268,6 +269,10 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.selectedChat?.plots ?? [];
   }
 
+  get plotsPanelToggleLabel(): string {
+    return this.isPlotsPanelOpen ? 'Diagramme ausblenden' : 'Diagramme einblenden';
+  }
+
   get canSendMessage(): boolean {
     if (!this.selectedChat) return false;
 
@@ -355,6 +360,11 @@ export class AppComponent implements OnInit, OnDestroy {
   removeCsv(): void {
     this.tempUploadedFile = null;
     this.tempCsvPreview = null;
+  }
+
+  togglePlotsPanel(): void {
+    this.isPlotsPanelOpen = !this.isPlotsPanelOpen;
+    this.refreshView();
   }
 
   sendMessage(): void {
