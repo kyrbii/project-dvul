@@ -1,5 +1,5 @@
 <div class="page-shell">
-  <div class="layout-grid">
+  <div class="layout-grid" [class.plots-collapsed]="!isPlotsPanelOpen">
     <section class="panel left-top">
       <div class="panel-header">
         <h2>Zusammenfassung</h2>
@@ -74,6 +74,22 @@
             <h2>CSV Assistent</h2>
             <p class="hint">Lade eine CSV hoch oder stelle Fragen zu deinen Daten.</p>
           </div>
+          <button
+            type="button"
+            class="ghost-icon-button plots-toggle"
+            (click)="togglePlotsPanel()"
+            [attr.aria-label]="plotsPanelToggleLabel"
+            [attr.title]="plotsPanelToggleLabel"
+          >
+            <svg *ngIf="isPlotsPanelOpen" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M3 5h18v14H3V5zm2 2v10h12V7H5zm14 0v10h0V7h0z"/>
+            </svg>
+            <svg *ngIf="!isPlotsPanelOpen" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M3 5h18v14H3V5zm2 2v10h12V7H5zm14 0v10h0V7h0z"/>
+              <path d="M15 12l4-4v8l-4-4z"/>
+            </svg>
+            <span class="plots-toggle-text">{{ isPlotsPanelOpen ? 'Diagramme ausblenden' : 'Diagramme einblenden' }}</span>
+          </button>
         </div>
 
         <div class="chat-window" #chatWindow>
@@ -160,7 +176,7 @@
       </section>
     </main>
 
-    <aside class="panel right-panel">
+    <aside class="panel right-panel" *ngIf="isPlotsPanelOpen">
       <div class="panel-header">
         <h2>Diagramme</h2>
       </div>
