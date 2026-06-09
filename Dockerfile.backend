@@ -10,12 +10,6 @@ COPY pyproject.toml .
 COPY uv.lock* .
 RUN uv sync --no-install-project
 
-# Install docker CLI so the backend can launch one-shot sandbox containers.
-# This keeps the image minimal while enabling `docker run` against the host
-# socket which will be mounted by docker-compose when desired.
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends docker.io ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
