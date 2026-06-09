@@ -174,6 +174,14 @@ async def upload_csv(file: UploadFile = File(...)):
 
         df = pd.read_csv(file.file)
 
+        if df.empty:
+            raise HTTPException(
+                status_code=400,
+                detail="CSV-Datei enthält keine verwertbaren Daten.",
+            )
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("CSV Fehler beim Einlesen der Datei")
         raise HTTPException(

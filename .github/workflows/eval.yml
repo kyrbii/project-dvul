@@ -1,0 +1,30 @@
+name: Evals (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+      OPENROUTER_VISION_MODEL: ${{ secrets.OPENROUTER_VISION_MODEL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Test 1 — Pipeline-Smoke
+        run: uv run python tests/eval/eval_plot_pipeline_smoke.py
+
+      - name: Test 2 — Werte-Genauigkeit
+        run: uv run python tests/eval/eval_plot_values.py
+
+      - name: Test 3 — Visueller Judge
+        run: uv run python tests/eval/eval_judge_visual.py
