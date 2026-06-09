@@ -5,9 +5,6 @@ services:
       dockerfile: Dockerfile.backend
     volumes:
       - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      - PLOT_SANDBOX_IMAGE=project_dvul_plot_sandbox:latest
     ports:
       - "8000:8000"
 

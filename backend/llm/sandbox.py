@@ -13,22 +13,6 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SANDBOX_IMAGE = os.environ.get(
-    "PLOT_SANDBOX_IMAGE", "project_dvul_plot_sandbox:latest"
-)
-DEFAULT_DOCKER_BINARY = os.environ.get("PLOT_SANDBOX_DOCKER_BIN", "docker")
-DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("PLOT_SANDBOX_TIMEOUT_SECS", "10"))
-
-
-def find_docker_binary() -> str | None:
-    if os.path.isabs(DEFAULT_DOCKER_BINARY) and os.path.exists(DEFAULT_DOCKER_BINARY):
-        return DEFAULT_DOCKER_BINARY
-    if shutil.which(DEFAULT_DOCKER_BINARY):
-        return DEFAULT_DOCKER_BINARY
-    for candidate in ["/usr/bin/docker", "/bin/docker", "/usr/local/bin/docker"]:
-        if os.path.exists(candidate):
-            return candidate
-    return None
 
 
 PLOT_TIMEOUT_SECONDS = 8
