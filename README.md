@@ -1,58 +1,85 @@
 # Data Visualisation and understanding with LLMs (DVUL)
-Create your own plots and detailed descriptions for your csv datasets with an LLM.
+
+Create your own plots and detailed descriptions for your CSV datasets with an LLM.
 
 ---
-### Visual to come
----
+
 ## Features
-- **Heavily specialized in creating plots**: This tools main objective is to provide the user with the best possible plots for a given use case and data set.
-- **Understand large data sets with ease**: With a detailed description, analysis and plots you are able to understand an unknown dataset at blazing speeds without having to take a single look into the data.
+- **Specialized Plot Generation**: Automatically produces visual diagrams for uploaded datasets via Matplotlib, Seaborn, and Pandas.
+- **Natural Language Analyst**: A ReAct agent runs queries, calculates correlations, reviews distributions, and describes columns.
+- **Agent Activity Log**: Real-time display of agent tools and parameters in the frontend.
+- **Self-Correcting Plot Loop**: Uses a LangGraph cycle to write, validate, and self-repair plotting scripts.
+- **Multi-Model Support**: Use local models (Ollama) or remote endpoints (OpenRouter).
+
 ---
-## Tech Stack
-- **Frontend**: Angular, TypeScript, node.js
-- **Backend**: FastAPI, Python, LangChain
-- **Deployment**: Docker
+
+## Architecture & System Flow
+
+The system runs as an Angular client talking to a FastAPI server that coordinates two LLM agents:
+
+1. **Frontend (Angular)**: The user interface defined in [app.component.ts](frontend/src/app/app.component.ts) and [chat.service.ts](frontend/src/app/chat.service.ts).
+2. **Backend (FastAPI)**: Manages routing, state, and files. Defined in [main.py](backend/main.py).
+3. **Analyst Agent**: A ReAct agent that utilizes analytical tools to query the dataset. Defined in [agent_connection.py](backend/llm/agent_connection.py) and [tools.py](backend/llm/tools.py).
+4. **Plotting Agent**: A specialized LangGraph sub-graph that generates code and corrects execution errors dynamically. Defined in [plot_agent.py](backend/llm/plot_agent.py).
+5. **Hardened Sandbox**: Executes plotting code in a restricted scope with disabled builtins, producing SVG assets. Defined in [sandbox.py](backend/llm/sandbox.py).
+
 ---
-## Prerequisites
-- Latest version of `uv` by Astral.
-- npm
-- Docker Engine
-- Docker Compose
----
+
 ## Installation & Setup
-Clone the repository.
 
-### Developing & Testing
+### Production (Using Docker)
 
-First, bring your environment up to speed:
-```bash
-uv sync
-cd frontend
-npm install --legacy-peer-deps
-cd ..
-```
+To run the application using pre-built images pulled directly from the GitHub Container Registry (GHCR):
 
-**Start the Backend:**
-Terminal 1
+1. **Prerequisites**: Ensure you have **Docker** and **Docker Compose** installed.
+2. **Environment File**: Create a `.env` file in the root workspace directory with your credentials:
+   ```ini
+   # Remote OpenRouter Config
+   OPENROUTER_API_KEY="sk-or-v1-your-key-here"
+   OPENROUTER_MODEL="openai/gpt-oss-120b:free"
+   ```
+3. **Launch Service**:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+   *The application is served at `http://localhost:4200`.*
 
-```bash
-uv run uvicorn backend.main:app --port 8000 --reload
-```
+---
 
-**Start the Frontend:**
-Terminal 2
+### Local Development
 
-```bash
-cd frontend
-npm start
-```
+For running and modifying the codebase locally:
 
-**Open the App:**
-[Frontend in the Web](http://localhost:4200)
+1. **Prerequisites**: Ensure you have **npm**, **Docker** (optional, for local compose builds), and **uv** (by Astral) installed.
+2. **Environment Setup**: Create a `.env` file in the root workspace directory:
+   ```ini
+   # Remote OpenRouter Config
+   OPENROUTER_API_KEY="sk-or-v1-your-key-here"
+   OPENROUTER_MODEL="openai/gpt-oss-120b:free"
 
-### Production
-The easiest way to run the application securely is by using Docker Compose. Make sure Docker is installed on your system. This uses the latest Release of the GitHub Repository.
+   # Local Ollama Config (Optional)
+   OLLAMA_MODEL="gemma4"
+   # OLLAMA_HOST="http://localhost:11434"
 
-```bash
-sudo docker compose -f docker-compose.prod.yml up
-```
+   # Configuration & Logging
+   LOG_LEVEL="DEBUG"
+   LOG_FILE="logs/backend.log"
+   ```
+3. **Sync Dependencies**:
+   ```bash
+   uv sync
+   cd frontend && npm install --legacy-peer-deps && cd ..
+   ```
+4. **Start Backend**:
+   ```bash
+   uv run uvicorn backend.main:app --port 8000 --reload
+   ```
+5. **Start Frontend**:
+   ```bash
+   cd frontend && npm start
+   ```
+   *The app runs at `http://localhost:4200`.*
+6. **Optional (Local Docker Container Build with backend volume mounts)**:
+   ```bash
+   docker compose up --build
+   ```
