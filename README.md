@@ -32,11 +32,16 @@ The system runs as an Angular client talking to a FastAPI server that coordinate
 To run the application using pre-built images pulled directly from the GitHub Container Registry (GHCR):
 
 1. **Prerequisites**: Ensure you have **Docker** and **Docker Compose** installed.
+   - *Local Models Support*: If you plan to use local models in production, you must have [Ollama](https://ollama.com) running on your host machine with the `gemma4` model pulled.
 2. **Environment File**: Create a `.env` file in the root workspace directory with your credentials:
    ```ini
    # Remote OpenRouter Config
    OPENROUTER_API_KEY="sk-or-v1-your-key-here"
    OPENROUTER_MODEL="openai/gpt-oss-120b:free"
+
+   # Local Ollama Config (Required in production for local models to load)
+   OLLAMA_HOST="http://host.docker.internal:11434"
+   OLLAMA_MODEL="gemma4"
    ```
 3. **Launch Service**:
    ```bash
@@ -51,6 +56,7 @@ To run the application using pre-built images pulled directly from the GitHub Co
 For running and modifying the codebase locally:
 
 1. **Prerequisites**: Ensure you have **npm**, **Docker** (optional, for local compose builds), and **uv** (by Astral) installed.
+   - *Local Models Support*: If you want to use local models, you should download and install [Ollama](https://ollama.com). Out of the box, only `gemma4` is invoked, but you can configure additional local or remote models in [model_selection.py](models/model_selection.py).
 2. **Environment Setup**: Create a `.env` file in the root workspace directory:
    ```ini
    # Remote OpenRouter Config
