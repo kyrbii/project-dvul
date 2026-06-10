@@ -52,6 +52,7 @@ def startup_event():
     threading.Thread(target=run_startup_evaluation, daemon=True).start()
 
 MAX_ACTIVITY_EVENTS = 50
+CSV_PREVIEW_ROW_LIMIT = 2
 
 def add_activity_event(chat_id: str, message: str, event_type: str = "agent") -> None:
     if chat_id not in chat_store:
@@ -82,7 +83,9 @@ def has_header(file):
 
 def create_dataset_summary(df: pd.DataFrame):
     clean_preview = (
-        df.head(5).replace([np.nan, np.inf, -np.inf], None).to_dict(orient="records")
+        df.head(CSV_PREVIEW_ROW_LIMIT)
+        .replace([np.nan, np.inf, -np.inf], None)
+        .to_dict(orient="records")
     )
 
     clean_describe = (
@@ -97,6 +100,16 @@ def create_dataset_summary(df: pd.DataFrame):
         "missing_values": df.isnull().sum().astype(int).to_dict(),
         "describe": clean_describe,
         "preview": clean_preview,
+    }
+
+def create_csv_preview(file_name: str, summary: dict):
+    return {
+        "fileName": file_name,
+        "headers": summary["columns"],
+        "rows": [
+            [str(row.get(col, "")) for col in summary["columns"]]
+            for row in summary["preview"]
+        ],
     }
 
 
@@ -175,11 +188,7 @@ async def upload_csv(file: UploadFile = File(...)):
     from datetime import datetime
     created_at = datetime.now().strftime("%d.%m.%Y, %H:%M")
     chat_name = file.filename.replace('.csv', '')
-    csv_preview = {
-        "fileName": file.filename,
-        "headers": summary["columns"],
-        "rows": [[str(row.get(col, "")) for col in summary["columns"]] for row in summary["preview"]]
-    }
+    csv_preview = create_csv_preview(file.filename, summary)
     chat_store[chat_id] = {
         "filename": file.filename,
         "dataframe": df,
@@ -191,9 +200,7 @@ async def upload_csv(file: UploadFile = File(...)):
         "name": chat_name,
         "csv_preview": csv_preview
     }
-    
-    preview_df = df.head(5).replace([np.nan, np.inf, -np.inf], None)
-    
+
     # Let the model analyze the file
     return {
         "chat_id": chat_id,
@@ -282,11 +289,10 @@ def get_chats():
         if not csv_preview and "dataframe" in chat_data:
             df = chat_data["dataframe"]
             summary = create_dataset_summary(df)
-            csv_preview = {
-                "fileName": chat_data.get("filename", "dataset.csv"),
-                "headers": summary["columns"],
-                "rows": [[str(row.get(col, "")) for col in summary["columns"]] for row in summary["preview"]]
-            }
+            csv_preview = create_csv_preview(
+                chat_data.get("filename", "dataset.csv"),
+                summary,
+            )
             chat_data["csv_preview"] = csv_preview
 
         chats_list.append({
@@ -311,4 +317,3 @@ def get_chat_history(chat_id: str):
         "chat_id": chat_id,
         "messages": chat_store[chat_id].get("messages", [])
     }
-

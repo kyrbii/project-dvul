@@ -18,6 +18,25 @@ def test_upload_csv_success():
     assert "chat_id" in response.json()
 
 
+def test_csv_preview_is_limited_to_two_rows():
+    csv_content = b"name,age\nAlice,30\nBob,25\nCharlie,35"
+    upload = client.post(
+        "/upload-csv",
+        files={"file": ("test.csv", io.BytesIO(csv_content), "text/csv")}
+    )
+    assert upload.status_code == 200
+    upload_body = upload.json()
+    assert len(upload_body["summary"]["preview"]) == 2
+
+    chats = client.get("/chats")
+    assert chats.status_code == 200
+    uploaded_chat = next(
+        chat for chat in chats.json()["chats"]
+        if chat["chat_id"] == upload_body["chat_id"]
+    )
+    assert len(uploaded_chat["csv_preview"]["rows"]) == 2
+
+
 def test_upload_csv_wrong_format():
     response = client.post(
         "/upload-csv",
