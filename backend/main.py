@@ -255,7 +255,7 @@ def get_plots(chat_id: str, plot_index: int):
     return Response(content=svg, media_type="image/svg+xml")
 
 @app.get("/plots/{chat_id}")                            # für alle Plots pro Chat-ID
-def get_plots(chat_id: str):
+def get_chat_plots(chat_id: str):
     if chat_id not in chat_store:
         raise HTTPException(status_code=404, detail="Chat nicht gefunden.")
 
